@@ -285,7 +285,7 @@ const STRINGS = {
   },
   ar: {
     dir: "rtl",
-    brand: "ذكاء السوق السعودي",
+    brand: "بنية السوق السعودي",
     nav: {
       home: "نظرة عامة", stock: "تحليل السهم", market: "السوق",
       portfolio: "المحفظة", journal: "اليوميات", weekly: "المراجعة الأسبوعية",
@@ -296,7 +296,7 @@ const STRINGS = {
     },
     // Auth
     authWelcome: "أهلاً بك في قرار",
-    authTagline: "ذكاء السوق السعودي — تحليل فقط.",
+    authTagline: "بنية السوق السعودي — تحليل فقط.",
     signIn: "تسجيل دخول", signUp: "إنشاء حساب",
     haveAccount: "لديك حساب بالفعل؟",
     noAccount: "ليس لديك حساب؟",
