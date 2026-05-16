@@ -7,8 +7,20 @@ import {
   EyeOff, Image as ImageIcon, Upload, Users, ChevronLeft,
 } from "lucide-react";
 
+// Supabase database helpers
+import {
+  db_listUsers, db_countUsers, db_findUserByEmail, db_findUserByUsername, db_createUser,
+  db_listWaitlist, db_addToWaitlist, db_removeFromWaitlist,
+  db_listStocks, db_saveStock, db_deleteStock,
+  db_getMarket, db_saveMarket,
+  db_getWeekly, db_saveWeekly,
+  db_getSettings, db_setSiteForceOpen, db_setLaunchDate,
+  db_listTrades, db_saveTrade, db_deleteTrade,
+  db_listJournalEntries, db_saveJournalEntry, db_deleteJournalEntry,
+} from "./db.js";
+
 /* ──────────────────────────────────────────────────────────────────
-   QARAR — Saudi Market Intelligence Platform v2
+   QARAR — Saudi Market Direction Platform v3 (Supabase)
    - Unified serif/nastaliq typography
    - Higher contrast palette
    - User authentication (signup/signin)
@@ -78,7 +90,7 @@ const font = (lang) => (lang === "ar" ? fontAr : fontEn);
 const STRINGS = {
   en: {
     dir: "ltr",
-    brand: "Saudi Market Intelligence",
+    brand: "Saudi Market Direction",
     nav: {
       home: "Overview", stock: "Stock Analysis", market: "Market",
       portfolio: "Portfolio", journal: "Journal", weekly: "Weekly Review",
@@ -89,7 +101,7 @@ const STRINGS = {
     },
     // Auth
     authWelcome: "Welcome to Qarar",
-    authTagline: "Saudi market intelligence — analysis only.",
+    authTagline: "Saudi market direction — analysis only.",
     signIn: "Sign In", signUp: "Sign Up",
     haveAccount: "Already have an account?",
     noAccount: "Don't have an account?",
@@ -330,7 +342,7 @@ const STRINGS = {
   },
   ar: {
     dir: "rtl",
-    brand: "ذكاء السوق السعودي",
+    brand: "اتجاه السوق السعودي",
     nav: {
       home: "نظرة عامة", stock: "تحليل السهم", market: "السوق",
       portfolio: "المحفظة", journal: "اليوميات", weekly: "المراجعة الأسبوعية",
@@ -341,7 +353,7 @@ const STRINGS = {
     },
     // Auth
     authWelcome: "أهلاً بك في قرار",
-    authTagline: "ذكاء السوق السعودي — تحليل فقط.",
+    authTagline: "اتجاه السوق السعودي — تحليل فقط.",
     signIn: "تسجيل دخول", signUp: "إنشاء حساب",
     haveAccount: "لديك حساب بالفعل؟",
     noAccount: "ليس لديك حساب؟",
@@ -1388,16 +1400,13 @@ const getYouTubeId = (url) => {
    LAUNCH SYSTEM — Seat Counter, Congrats, Countdown, Seats Full
    ────────────────────────────────────────────────────────────────── */
 
-// Helper: get or initialize launch date in localStorage
+// Helper: launch date is loaded from Supabase settings.
+// We cache it in module scope so countdown components can access synchronously.
+let _launchDateCache = null;
+const setLaunchDateCache = (ts) => { _launchDateCache = ts; };
 const getLaunchDate = () => {
-  let stored = ls.get("qarar:launchDate", null);
-  if (!stored) {
-    // First time — set launch date to N days from now
-    const launchTs = Date.now() + LAUNCH_DAYS_FROM_INSTALL * 24 * 60 * 60 * 1000;
-    ls.set("qarar:launchDate", launchTs);
-    stored = launchTs;
-  }
-  return stored;
+  // Fallback if not yet loaded: 10 days from now
+  return _launchDateCache || (Date.now() + LAUNCH_DAYS_FROM_INSTALL * 24 * 60 * 60 * 1000);
 };
 
 // Helper: check whether countdown is active or already passed
@@ -1693,9 +1702,11 @@ const SeatsFullScreen = ({ onJoinWaitlist, waitlistCount }) => {
   const [email, setEmail] = useState("");
   const [joined, setJoined] = useState(false);
   const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
-  const submit = () => {
+  const submit = async () => {
     setError("");
+    if (submitting) return;
     if (!email.trim()) {
       setError(t.authErrorRequired);
       return;
@@ -1704,16 +1715,25 @@ const SeatsFullScreen = ({ onJoinWaitlist, waitlistCount }) => {
       setError(t.authErrorEmail);
       return;
     }
-    // Save to waitlist
-    const list = ls.get("qarar:waitlist", []);
-    if (list.find((w) => w.email.toLowerCase() === email.toLowerCase())) {
+    setSubmitting(true);
+    try {
+      const result = await db_addToWaitlist(email);
+      if (result.error) {
+        setError(result.error);
+        setSubmitting(false);
+        return;
+      }
       setJoined(true);
-      return;
+      if (onJoinWaitlist) {
+        const fresh = await db_listWaitlist();
+        onJoinWaitlist(fresh);
+      }
+    } catch (err) {
+      console.error(err);
+      setError(t.authErrorInvalid);
+    } finally {
+      setSubmitting(false);
     }
-    const updated = [...list, { id: "w" + Date.now(), email: email.trim().toLowerCase(), joinedAt: Date.now() }];
-    ls.set("qarar:waitlist", updated);
-    setJoined(true);
-    if (onJoinWaitlist) onJoinWaitlist(updated);
   };
 
   return (
@@ -1853,10 +1873,12 @@ const AuthPage = ({ users, setUsers, setCurrentUser, onSignupSuccess }) => {
   const [error, setError] = useState("");
 
   const seatsFilled = users.length;
+  const [submitting, setSubmitting] = useState(false);
 
-  const submit = (e) => {
+  const submit = async (e) => {
     e?.preventDefault();
     setError("");
+    if (submitting) return;
 
     if (mode === "signup") {
       if (!name.trim() || !username.trim() || !email.trim() || !password) {
@@ -1865,38 +1887,50 @@ const AuthPage = ({ users, setUsers, setCurrentUser, onSignupSuccess }) => {
       if (!isValidEmail(email)) { setError(t.authErrorEmail); return; }
       if (password.length < 6) { setError(t.authErrorPassword); return; }
 
-      const exists = users.find(
-        (u) => u.email.toLowerCase() === email.toLowerCase() ||
-               u.username.toLowerCase() === username.toLowerCase()
-      );
-      if (exists) { setError(t.authErrorExists); return; }
+      setSubmitting(true);
+      try {
+        // Check existence in Supabase
+        const existingEmail = await db_findUserByEmail(email);
+        if (existingEmail) { setError(t.authErrorExists); setSubmitting(false); return; }
+        const existingUsername = await db_findUserByUsername(username);
+        if (existingUsername) { setError(t.authErrorExists); setSubmitting(false); return; }
 
-      const seatNumber = users.length + 1; // 1-based seat number
-      const newUser = {
-        id: "u" + Date.now(),
-        name: name.trim(),
-        username: username.trim(),
-        email: email.trim().toLowerCase(),
-        passwordHash: simpleHash(password),
-        joinedAt: Date.now(),
-        seatNumber, // ← founding seat number
-      };
-      const updatedUsers = [...users, newUser];
-      setUsers(updatedUsers);
-      ls.set("qarar:users", updatedUsers);
-      ls.set("qarar:session", { userId: newUser.id, time: Date.now() });
-      setCurrentUser(newUser);
-      // Signal parent that this is a fresh signup (show congrats)
-      if (onSignupSuccess) onSignupSuccess(newUser);
+        const result = await db_createUser({
+          name, username, email,
+          passwordHash: simpleHash(password),
+        });
+        if (result.error) { setError(t.authErrorExists); setSubmitting(false); return; }
+
+        const newUser = result.user;
+        // Refresh user list
+        const fresh = await db_listUsers();
+        setUsers(fresh);
+        ls.set("qarar:session", { userId: newUser.id, time: Date.now() });
+        setCurrentUser(newUser);
+        if (onSignupSuccess) onSignupSuccess(newUser);
+      } catch (err) {
+        console.error(err);
+        setError(t.authErrorInvalid);
+      } finally {
+        setSubmitting(false);
+      }
     } else {
       // signin
       if (!email.trim() || !password) { setError(t.authErrorRequired); return; }
-      const user = users.find((u) => u.email.toLowerCase() === email.toLowerCase());
-      if (!user || user.passwordHash !== simpleHash(password)) {
-        setError(t.authErrorInvalid); return;
+      setSubmitting(true);
+      try {
+        const user = await db_findUserByEmail(email);
+        if (!user || user.passwordHash !== simpleHash(password)) {
+          setError(t.authErrorInvalid); setSubmitting(false); return;
+        }
+        ls.set("qarar:session", { userId: user.id, time: Date.now() });
+        setCurrentUser(user);
+      } catch (err) {
+        console.error(err);
+        setError(t.authErrorInvalid);
+      } finally {
+        setSubmitting(false);
       }
-      ls.set("qarar:session", { userId: user.id, time: Date.now() });
-      setCurrentUser(user);
     }
   };
 
@@ -2709,40 +2743,58 @@ const PortfolioPage = ({ currentUser }) => {
   const { c, t, lang } = useApp();
   const isAr = lang === "ar";
 
-  // Per-user storage key
-  const storageKey = `qarar:trades:${currentUser.id}`;
-  const [trades, setTrades] = useState(() => ls.get(storageKey, []));
+  const [trades, setTrades] = useState([]);
+  const [loaded, setLoaded] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
   const [closing, setClosing] = useState(null);
   const [filter, setFilter] = useState("open"); // open | closed | all
 
-  const persistTrades = (newTrades) => {
-    setTrades(newTrades);
-    ls.set(storageKey, newTrades);
-  };
+  // Load trades from Supabase on mount
+  useEffect(() => {
+    (async () => {
+      const list = await db_listTrades(currentUser.id);
+      setTrades(list);
+      setLoaded(true);
+    })();
+  }, [currentUser.id]);
 
-  const handleSave = (trade) => {
-    const exists = trades.find((tr) => tr.id === trade.id);
-    const newList = exists ? trades.map((tr) => (tr.id === trade.id ? trade : tr)) : [...trades, trade];
-    persistTrades(newList);
+  const handleSave = async (trade) => {
+    // Ensure trade has user_id and an id
+    const toSave = {
+      ...trade,
+      id: trade.id || ("t" + Date.now() + Math.random().toString(36).slice(2, 7)),
+      userId: currentUser.id,
+      status: trade.status || "open",
+      openedAt: trade.openedAt || Date.now(),
+    };
+    await db_saveTrade(toSave);
+    const fresh = await db_listTrades(currentUser.id);
+    setTrades(fresh);
     setShowForm(false);
     setEditing(null);
   };
 
-  const handleClose = (trade) => {
-    const newList = trades.map((tr) => (tr.id === trade.id ? trade : tr));
-    persistTrades(newList);
+  const handleClose = async (trade) => {
+    const toSave = { ...trade, status: "closed", closedAt: Date.now(), userId: currentUser.id };
+    await db_saveTrade(toSave);
+    const fresh = await db_listTrades(currentUser.id);
+    setTrades(fresh);
     setClosing(null);
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (!window.confirm(t.confirmDeleteTrade)) return;
-    persistTrades(trades.filter((tr) => tr.id !== id));
+    await db_deleteTrade(id);
+    const fresh = await db_listTrades(currentUser.id);
+    setTrades(fresh);
   };
 
-  const handleReopen = (trade) => {
-    persistTrades(trades.map((tr) => (tr.id === trade.id ? { ...tr, status: "open", closePrice: 0 } : tr)));
+  const handleReopen = async (trade) => {
+    const toSave = { ...trade, status: "open", closePrice: 0, closedAt: null, userId: currentUser.id };
+    await db_saveTrade(toSave);
+    const fresh = await db_listTrades(currentUser.id);
+    setTrades(fresh);
   };
 
   const openTrades = trades.filter((tr) => tr.status === "open");
@@ -3122,31 +3174,38 @@ const JournalPage = ({ currentUser }) => {
   const { c, t, lang } = useApp();
   const isAr = lang === "ar";
 
-  const storageKey = `qarar:journal:${currentUser.id}`;
-  const [entries, setEntries] = useState(() => ls.get(storageKey, []));
+  const [entries, setEntries] = useState([]);
+  const [loaded, setLoaded] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
 
-  const persist = (newEntries) => {
-    setEntries(newEntries);
-    ls.set(storageKey, newEntries);
-  };
+  // Load on mount
+  useEffect(() => {
+    (async () => {
+      const list = await db_listJournalEntries(currentUser.id);
+      setEntries(list);
+      setLoaded(true);
+    })();
+  }, [currentUser.id]);
 
-  const handleSave = (entry) => {
-    const exists = entries.find((e) => e.id === entry.id);
-    const newList = exists
-      ? entries.map((e) => (e.id === entry.id ? entry : e))
-      : [entry, ...entries];
-    // Sort by date descending
-    newList.sort((a, b) => (b.date || "").localeCompare(a.date || ""));
-    persist(newList);
+  const handleSave = async (entry) => {
+    const toSave = {
+      ...entry,
+      id: entry.id || ("j" + Date.now() + Math.random().toString(36).slice(2, 7)),
+      userId: currentUser.id,
+    };
+    await db_saveJournalEntry(toSave);
+    const fresh = await db_listJournalEntries(currentUser.id);
+    setEntries(fresh);
     setShowForm(false);
     setEditing(null);
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (!window.confirm(t.confirmDeleteEntry)) return;
-    persist(entries.filter((e) => e.id !== id));
+    await db_deleteJournalEntry(id);
+    const fresh = await db_listJournalEntries(currentUser.id);
+    setEntries(fresh);
   };
 
   // Stats
@@ -3429,15 +3488,15 @@ const AdminDashboard = ({ stocks, weekly, users, goto, siteForceOpen, setSiteFor
   const daysLeft = Math.floor(diff / (24 * 60 * 60 * 1000));
   const hoursLeft = Math.floor((diff % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
 
-  const toggleSite = () => {
+  const toggleSite = async () => {
     if (siteForceOpen) {
       if (window.confirm(isAr ? "إقفال الموقع للأعضاء؟" : "Lock the site for members again?")) {
-        ls.set("qarar:siteForceOpen", false);
+        await db_setSiteForceOpen(false);
         setSiteForceOpen(false);
       }
     } else {
       if (window.confirm(t.openSiteConfirm)) {
-        ls.set("qarar:siteForceOpen", true);
+        await db_setSiteForceOpen(true);
         setSiteForceOpen(true);
       }
     }
@@ -3591,28 +3650,28 @@ const AdminStocks = ({ stocks, setStocks }) => {
     setEditing(safe); setShowForm(true);
   };
 
-  const save = () => {
+  const save = async () => {
     const updated = { ...editing, updatedAt: Date.now() };
-    const exists = stocks.find((s) => s.id === updated.id);
-    const newList = exists ? stocks.map((s) => (s.id === updated.id ? updated : s)) : [...stocks, updated];
-    setStocks(newList);
-    ls.set("qarar:stocks", newList);
+    await db_saveStock(updated);
+    const fresh = await db_listStocks();
+    setStocks(fresh);
     setShowForm(false); setEditing(null);
   };
 
-  const remove = (id) => {
+  const remove = async (id) => {
     if (!window.confirm(t.confirmDelete)) return;
-    const newList = stocks.filter((s) => s.id !== id);
-    setStocks(newList);
-    ls.set("qarar:stocks", newList);
+    await db_deleteStock(id);
+    const fresh = await db_listStocks();
+    setStocks(fresh);
   };
 
-  const togglePublish = (id) => {
-    const newList = stocks.map((s) =>
-      s.id === id ? { ...s, published: !s.published, updatedAt: Date.now() } : s
-    );
-    setStocks(newList);
-    ls.set("qarar:stocks", newList);
+  const togglePublish = async (id) => {
+    const stock = stocks.find((s) => s.id === id);
+    if (!stock) return;
+    const updated = { ...stock, published: !stock.published, updatedAt: Date.now() };
+    await db_saveStock(updated);
+    const fresh = await db_listStocks();
+    setStocks(fresh);
   };
 
   if (showForm && editing) {
@@ -3836,10 +3895,11 @@ const AdminMarket = ({ market, setMarket }) => {
   const isAr = lang === "ar";
   const [local, setLocal] = useState(market);
   const [saved, setSaved] = useState(false);
-  const save = () => {
+  const save = async () => {
     const updated = { ...local, updatedAt: Date.now() };
-    setMarket(updated);
-    ls.set("qarar:market", updated);
+    await db_saveMarket(updated);
+    const fresh = await db_getMarket();
+    setMarket(fresh);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };
@@ -3911,10 +3971,11 @@ const AdminWeekly = ({ weekly, setWeekly }) => {
   const { c, t, lang } = useApp();
   const [local, setLocal] = useState(weekly);
   const [saved, setSaved] = useState(false);
-  const save = () => {
+  const save = async () => {
     const updated = { ...local, updatedAt: Date.now() };
-    setWeekly(updated);
-    ls.set("qarar:weekly", updated);
+    await db_saveWeekly(updated);
+    const fresh = await db_getWeekly();
+    setWeekly(fresh);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };
@@ -4079,11 +4140,11 @@ const AdminUsers = ({ users, waitlist, setWaitlist }) => {
                     {new Date(w.joinedAt).toLocaleDateString(isAr ? "ar-SA" : "en-US")}
                   </div>
                   <Button variant="danger" size="sm" icon={Trash2}
-                    onClick={() => {
+                    onClick={async () => {
                       if (window.confirm(isAr ? "حذف هذا البريد من القائمة؟" : "Remove this email from waitlist?")) {
-                        const updated = waitlist.filter((x) => x.id !== w.id);
-                        setWaitlist(updated);
-                        ls.set("qarar:waitlist", updated);
+                        await db_removeFromWaitlist(w.id);
+                        const fresh = await db_listWaitlist();
+                        setWaitlist(fresh);
                       }
                     }}
                   />
@@ -4124,75 +4185,63 @@ export default function Qarar() {
   });
   const [adminPage, setAdminPage] = useState("dashboard");
 
-  // Data — with migration from older versions
-  const [stocks, setStocks] = useState(() => {
-    const stored = ls.get("qarar:stocks", null);
-    if (!stored || !Array.isArray(stored) || stored.length === 0) return DEFAULT_STOCKS;
-
-    // Migrate stored stocks: ensure all new fields exist
-    const migrated = stored.map((s) => ({
-      ...s,
-      images: s.images || { daily: "", weekly: "", monthly: "" },
-      sector: s.sector || "",
-      sectorAr: s.sectorAr || "",
-      momentum: s.momentum ?? 50,
-      outlook: s.outlook ?? "",
-      scenario: s.scenario ?? "",
-      scenarioAr: s.scenarioAr ?? "",
-      confidence: s.confidence ?? "medium",
-      horizon: s.horizon ?? "1M",
-    }));
-
-    // Add any DEFAULT leading stocks that aren't already in storage (by sym)
-    const existingSyms = new Set(migrated.map((s) => s.sym));
-    const missing = DEFAULT_STOCKS.filter((s) => !existingSyms.has(s.sym));
-
-    return [...migrated, ...missing];
+  // ─── Cloud data (loaded from Supabase on mount) ───
+  const [stocks, setStocks] = useState([]);
+  const [market, setMarket] = useState({
+    tasiValue: 0, tasiChange: 0, tasiChangePct: 0,
+    direction: "sideways", strength: 50,
+    quote: "", quoteAr: "",
+    quoteHighlight: [], quoteHighlightAr: [],
+    updatedAt: null,
   });
-  const [market, setMarket] = useState(() => {
-    const stored = ls.get("qarar:market", null);
-    if (!stored) return DEFAULT_MARKET;
-    // Migrate: ensure tasi fields exist
-    return {
-      ...DEFAULT_MARKET,
-      ...stored,
-      tasiValue: stored.tasiValue ?? 0,
-      tasiChange: stored.tasiChange ?? 0,
-      tasiChangePct: stored.tasiChangePct ?? 0,
-    };
+  const [weekly, setWeekly] = useState({
+    week: 1, title: "", titleAr: "", url: "",
+    description: "", descriptionAr: "", scenarios: [],
+    updatedAt: null,
   });
-  const [weekly, setWeekly] = useState(() => ls.get("qarar:weekly", DEFAULT_WEEKLY));
+  const [users, setUsers] = useState([]);
+  const [waitlist, setWaitlist] = useState([]);
+  const [siteForceOpen, setSiteForceOpen] = useState(false);
+  const [dataLoaded, setDataLoaded] = useState(false);
 
-  // Users (auth) — with seat number migration
-  const [users, setUsers] = useState(() => {
-    const stored = ls.get("qarar:users", []);
-    // Migrate: ensure every user has a seatNumber (based on join order)
-    const sorted = [...stored].sort((a, b) => (a.joinedAt || 0) - (b.joinedAt || 0));
-    const migrated = sorted.map((u, idx) => ({
-      ...u,
-      seatNumber: u.seatNumber || (idx + 1),
-    }));
-    if (migrated.length !== stored.length || migrated.some((u, i) => u.seatNumber !== stored[i]?.seatNumber)) {
-      ls.set("qarar:users", migrated);
-    }
-    return migrated;
-  });
-  const [currentUser, setCurrentUser] = useState(() => {
-    const session = ls.get("qarar:session", null);
-    if (!session) return null;
-    const allUsers = ls.get("qarar:users", []);
-    return allUsers.find((u) => u.id === session.userId) || null;
-  });
-
-  // Launch state — admin can force unlock, otherwise countdown
-  const [siteForceOpen, setSiteForceOpen] = useState(() => ls.get("qarar:siteForceOpen", false));
-  // Track if user JUST signed up (to show congrats screen briefly)
+  // Session-bound user from localStorage (auto-login)
+  const [currentUser, setCurrentUser] = useState(null);
   const [justSignedUp, setJustSignedUp] = useState(false);
-  // Waitlist (for visitors after seats fill)
-  const [waitlist, setWaitlist] = useState(() => ls.get("qarar:waitlist", []));
 
-  // Initialize launch date on first load (just to materialize the value)
-  useEffect(() => { getLaunchDate(); }, []);
+  // ─── Load everything from Supabase on first mount ───
+  useEffect(() => {
+    (async () => {
+      try {
+        // Parallel fetch for speed
+        const [stocksData, marketData, weeklyData, usersData, waitlistData, settingsData] = await Promise.all([
+          db_listStocks(),
+          db_getMarket(),
+          db_getWeekly(),
+          db_listUsers(),
+          db_listWaitlist(),
+          db_getSettings(),
+        ]);
+        setStocks(stocksData);
+        setMarket(marketData);
+        setWeekly(weeklyData);
+        setUsers(usersData);
+        setWaitlist(waitlistData);
+        setSiteForceOpen(settingsData.siteForceOpen);
+        setLaunchDateCache(settingsData.launchDate);
+
+        // Resume session if a userId was saved locally
+        const session = ls.get("qarar:session", null);
+        if (session?.userId) {
+          const matched = usersData.find((u) => u.id === session.userId);
+          if (matched) setCurrentUser(matched);
+        }
+      } catch (err) {
+        console.error("Initial load failed:", err);
+      } finally {
+        setDataLoaded(true);
+      }
+    })();
+  }, []);
 
   // Auto re-check launch time every minute so site can naturally unlock
   const [, setLaunchTick] = useState(0);
@@ -4236,6 +4285,45 @@ export default function Qarar() {
     ls.set("qarar:session", null);
     setCurrentUser(null);
   };
+
+  // ── Initial load: show splash while fetching from Supabase ──
+  if (!dataLoaded) {
+    return (
+      <AppContext.Provider value={ctx}>
+        <GlobalStyles c={c} />
+        <div dir={t.dir} style={{
+          minHeight: "100vh", background: c.ink, color: c.text,
+          fontFamily: font(lang),
+          display: "flex", flexDirection: "column",
+          alignItems: "center", justifyContent: "center", gap: 24,
+        }}>
+          <Logo size={48} />
+          <div style={{ fontFamily: fontNastaliq, fontSize: 36, color: c.gold }}>قَرار</div>
+          <div style={{
+            fontFamily: fontMono, fontSize: 11, color: c.muted,
+            letterSpacing: "0.25em", textTransform: "uppercase",
+          }}>
+            Loading…
+          </div>
+          <div style={{
+            width: 60, height: 2, background: c.border,
+            borderRadius: 2, overflow: "hidden", marginTop: 12,
+          }}>
+            <div style={{
+              width: "40%", height: "100%", background: c.gold,
+              animation: "qararLoadBar 1.2s ease-in-out infinite",
+            }} />
+          </div>
+          <style>{`
+            @keyframes qararLoadBar {
+              0% { transform: translateX(-100%); }
+              100% { transform: translateX(250%); }
+            }
+          `}</style>
+        </div>
+      </AppContext.Provider>
+    );
+  }
 
   // ── Admin mode (separate from user auth) ──
   if (mode === "admin") {
