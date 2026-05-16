@@ -17,6 +17,13 @@ import {
 
 const ADMIN_PASSWORD = "qarar2026"; // ⚠️ CHANGE THIS before production!
 
+/* ── Launch / Seat Configuration ───────────────────────────────── */
+// To change: update these two values, redeploy.
+const MAX_SEATS = 100;                          // Max seats before lockout
+const LAUNCH_DAYS_FROM_INSTALL = 10;            // Days until full launch
+// Launch date is computed once on first load and stored in localStorage
+// so it stays consistent for all users. Admin can override via toggle.
+
 /* ── Themes with IMPROVED CONTRAST ─────────────────────────────── */
 
 const THEMES = {
@@ -97,6 +104,44 @@ const STRINGS = {
     authErrorExists: "This email or username already exists",
     authErrorInvalid: "Invalid email or password",
     welcomeBack: "Welcome back",
+    // Launch / Countdown (NEW)
+    seatsLeft: "seats remaining",
+    seatsTaken: "members joined",
+    seatsFull: "Seats Full",
+    seatsFullDesc: "All 100 founding seats have been claimed.",
+    waitlistTitle: "Join the Waitlist",
+    waitlistDesc: "We'll notify you when new seats open.",
+    waitlistJoin: "Join Waitlist",
+    waitlistJoined: "You're on the waitlist!",
+    reserveMySeat: "Reserve My Seat",
+    congratsTitle: "Welcome to Qarar",
+    congratsLine: "You've reserved seat",
+    of: "of",
+    countdownTitle: "We open in",
+    countdownDays: "days",
+    countdownHours: "hours",
+    countdownMinutes: "minutes",
+    countdownSeconds: "seconds",
+    countdownDay: "day",
+    countdownHour: "hour",
+    countdownMinute: "minute",
+    countdownSecond: "second",
+    countdownDesc: "We'll notify you on your email at launch.",
+    yourSeat: "Your seat",
+    enterSite: "Enter Site",
+    waitlistEmail: "Email address",
+    // Admin
+    launchControl: "Launch Control",
+    launchStatus: "Launch Status",
+    siteLocked: "Site Locked",
+    siteOpen: "Site Open",
+    launchDate: "Launch Date",
+    seatsCount: "Seats Filled",
+    waitlistCount: "Waitlist",
+    openSiteNow: "Open Site Now",
+    openSiteConfirm: "Open the site for all members now? This bypasses the countdown.",
+    lockSiteAgain: "Lock Site Again",
+    waitlistTab: "Waitlist",
     // Home
     tadawul: "Tadawul · TASI",
     synthBy: "QARAR · INTELLIGENCE SYNTHESIS",
@@ -285,7 +330,7 @@ const STRINGS = {
   },
   ar: {
     dir: "rtl",
-    brand: "بنية السوق السعودي",
+    brand: "ذكاء السوق السعودي",
     nav: {
       home: "نظرة عامة", stock: "تحليل السهم", market: "السوق",
       portfolio: "المحفظة", journal: "اليوميات", weekly: "المراجعة الأسبوعية",
@@ -296,7 +341,7 @@ const STRINGS = {
     },
     // Auth
     authWelcome: "أهلاً بك في قرار",
-    authTagline: "بنية السوق السعودي — تحليل فقط.",
+    authTagline: "ذكاء السوق السعودي — تحليل فقط.",
     signIn: "تسجيل دخول", signUp: "إنشاء حساب",
     haveAccount: "لديك حساب بالفعل؟",
     noAccount: "ليس لديك حساب؟",
@@ -311,6 +356,44 @@ const STRINGS = {
     authErrorExists: "البريد الإلكتروني أو اسم المستخدم موجود مسبقاً",
     authErrorInvalid: "البريد أو كلمة المرور غير صحيحة",
     welcomeBack: "أهلاً بعودتك",
+    // Launch / Countdown (NEW)
+    seatsLeft: "مقعد متبقّي",
+    seatsTaken: "عضو مسجّل",
+    seatsFull: "المقاعد امتلأت",
+    seatsFullDesc: "تم حجز كل المقاعد المؤسسة المئة.",
+    waitlistTitle: "انضم لقائمة الانتظار",
+    waitlistDesc: "سنخبرك عند فتح مقاعد جديدة.",
+    waitlistJoin: "انضم لقائمة الانتظار",
+    waitlistJoined: "أنت الآن في قائمة الانتظار!",
+    reserveMySeat: "احجز مقعدي الآن",
+    congratsTitle: "أهلاً بك في قَرار",
+    congratsLine: "حجزت مقعدك رقم",
+    of: "من أصل",
+    countdownTitle: "نفتح الموقع خلال",
+    countdownDays: "أيام",
+    countdownHours: "ساعات",
+    countdownMinutes: "دقائق",
+    countdownSeconds: "ثواني",
+    countdownDay: "يوم",
+    countdownHour: "ساعة",
+    countdownMinute: "دقيقة",
+    countdownSecond: "ثانية",
+    countdownDesc: "سنرسل لك إشعاراً على بريدك عند الافتتاح.",
+    yourSeat: "مقعدك",
+    enterSite: "ادخل الموقع",
+    waitlistEmail: "البريد الإلكتروني",
+    // Admin
+    launchControl: "إدارة الإطلاق",
+    launchStatus: "حالة الإطلاق",
+    siteLocked: "الموقع مُقفل",
+    siteOpen: "الموقع مفتوح",
+    launchDate: "تاريخ الافتتاح",
+    seatsCount: "المقاعد المحجوزة",
+    waitlistCount: "قائمة الانتظار",
+    openSiteNow: "افتح الموقع الآن",
+    openSiteConfirm: "فتح الموقع لكل الأعضاء الآن؟ سيتم تجاوز العدّ التنازلي.",
+    lockSiteAgain: "أقفل الموقع مرة أخرى",
+    waitlistTab: "قائمة الانتظار",
     tadawul: "تداول · تاسي",
     synthBy: "قرار · توليفة ذكية",
     trendStrength: "قوة الاتجاه", bullishBias: "ميل صعودي",
@@ -1302,10 +1385,464 @@ const getYouTubeId = (url) => {
 };
 
 /* ──────────────────────────────────────────────────────────────────
+   LAUNCH SYSTEM — Seat Counter, Congrats, Countdown, Seats Full
+   ────────────────────────────────────────────────────────────────── */
+
+// Helper: get or initialize launch date in localStorage
+const getLaunchDate = () => {
+  let stored = ls.get("qarar:launchDate", null);
+  if (!stored) {
+    // First time — set launch date to N days from now
+    const launchTs = Date.now() + LAUNCH_DAYS_FROM_INSTALL * 24 * 60 * 60 * 1000;
+    ls.set("qarar:launchDate", launchTs);
+    stored = launchTs;
+  }
+  return stored;
+};
+
+// Helper: check whether countdown is active or already passed
+const isLaunchTimeReached = () => {
+  return Date.now() >= getLaunchDate();
+};
+
+/* ── Seat Counter (bar) ─────────────────────────────────────────── */
+
+const SeatCounter = ({ filled, max }) => {
+  const { c, t, lang } = useApp();
+  const percent = Math.min(100, (filled / max) * 100);
+  const remaining = Math.max(0, max - filled);
+  return (
+    <div style={{ marginBottom: 24 }}>
+      <div style={{
+        display: "flex", justifyContent: "space-between",
+        marginBottom: 10, fontFamily: fontMono, fontSize: 11,
+        color: c.muted, letterSpacing: "0.1em",
+      }}>
+        <span>{filled} / {max} {t.seatsTaken}</span>
+        <span style={{ color: remaining < 20 ? c.amber : c.gold }}>
+          {remaining} {t.seatsLeft}
+        </span>
+      </div>
+      <div style={{
+        height: 6, background: c.border, borderRadius: 3, overflow: "hidden",
+      }}>
+        <div style={{
+          width: `${percent}%`, height: "100%",
+          background: `linear-gradient(90deg, ${c.gold}, ${c.amber})`,
+          transition: "width 0.6s ease-out",
+        }} />
+      </div>
+    </div>
+  );
+};
+
+/* ── Congratulations screen (shown right after signup) ─────────── */
+
+const CongratsScreen = ({ user, onContinue }) => {
+  const { c, t, lang, setLang, theme, setTheme } = useApp();
+  // Auto-advance after 4 seconds
+  useEffect(() => {
+    const timer = setTimeout(() => onContinue(), 4500);
+    return () => clearTimeout(timer);
+  }, [onContinue]);
+
+  return (
+    <div dir={t.dir} style={{
+      minHeight: "100vh", background: c.ink, color: c.text,
+      fontFamily: font(lang),
+      display: "flex", alignItems: "center", justifyContent: "center", padding: 24,
+    }}>
+      <div style={{ width: "100%", maxWidth: 520, textAlign: "center" }}>
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: 32 }}>
+          <Logo size={60} />
+        </div>
+        <div style={{
+          fontFamily: fontMono, fontSize: 11, color: c.gold,
+          letterSpacing: "0.3em", textTransform: "uppercase", marginBottom: 24,
+        }}>
+          ✦ {t.welcomeBack} ✦
+        </div>
+        <h1 style={{
+          fontFamily: font(lang), fontSize: 44, fontWeight: 500, color: c.textHi,
+          margin: 0, marginBottom: 16, letterSpacing: "-0.02em",
+        }}>
+          {t.congratsTitle},
+        </h1>
+        <p style={{
+          fontFamily: font(lang), fontSize: 22, color: c.gold,
+          margin: "0 0 32px", fontStyle: "italic",
+        }}>
+          {user.name}
+        </p>
+        <div style={{
+          padding: "28px 24px",
+          background: `linear-gradient(135deg, ${c.surface} 0%, ${c.surface2} 100%)`,
+          border: `1px solid ${c.gold}40`, borderRadius: 4,
+        }}>
+          <div style={{
+            fontFamily: font(lang), fontSize: 16, color: c.text, marginBottom: 8,
+          }}>
+            {t.congratsLine}
+          </div>
+          <div style={{
+            fontFamily: font(lang), fontSize: 72, fontWeight: 500,
+            color: c.textHi, lineHeight: 1, letterSpacing: "-0.02em",
+            margin: "8px 0",
+          }}>
+            #{user.seatNumber}
+          </div>
+          <div style={{
+            fontFamily: fontMono, fontSize: 13, color: c.muted, letterSpacing: "0.1em",
+          }}>
+            {t.of} {MAX_SEATS}
+          </div>
+        </div>
+        <div style={{
+          marginTop: 40, fontFamily: fontMono, fontSize: 11,
+          color: c.muted, letterSpacing: "0.2em",
+        }}>
+          ↓
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* ── Countdown Screen ───────────────────────────────────────────── */
+
+const CountdownScreen = ({ user, onLogout }) => {
+  const { c, t, lang, setLang, theme, setTheme } = useApp();
+  const isAr = lang === "ar";
+  const launchTs = getLaunchDate();
+  const [now, setNow] = useState(Date.now());
+
+  useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const diff = Math.max(0, launchTs - now);
+  const days = Math.floor(diff / (24 * 60 * 60 * 1000));
+  const hours = Math.floor((diff % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
+  const minutes = Math.floor((diff % (60 * 60 * 1000)) / (60 * 1000));
+  const seconds = Math.floor((diff % (60 * 1000)) / 1000);
+
+  const pad = (n) => String(n).padStart(2, "0");
+
+  const units = [
+    { v: days, l: days === 1 ? t.countdownDay : t.countdownDays },
+    { v: hours, l: hours === 1 ? t.countdownHour : t.countdownHours },
+    { v: minutes, l: minutes === 1 ? t.countdownMinute : t.countdownMinutes },
+    { v: seconds, l: seconds === 1 ? t.countdownSecond : t.countdownSeconds },
+  ];
+
+  return (
+    <div dir={t.dir} style={{
+      minHeight: "100vh", background: c.ink, color: c.text,
+      fontFamily: font(lang),
+      display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+      padding: 24, position: "relative",
+    }}>
+      {/* Top-right toggles + logout */}
+      <div style={{ position: "absolute", top: 20, right: 20, display: "flex", gap: 8 }}>
+        <button onClick={() => setLang(lang === "en" ? "ar" : "en")} style={{
+          padding: "8px 12px", background: "transparent",
+          border: `1px solid ${c.border}`, color: c.text,
+          cursor: "pointer", borderRadius: 2,
+          fontFamily: fontMono, fontSize: 11, display: "flex", alignItems: "center", gap: 6,
+        }}>
+          <Languages size={13} color={c.gold} />
+          <span style={{ color: lang === "en" ? c.gold : c.muted }}>EN</span>
+          <span style={{ color: c.border }}>·</span>
+          <span style={{ color: lang === "ar" ? c.gold : c.muted, fontFamily: fontAr }}>ع</span>
+        </button>
+        <button onClick={() => setTheme(theme === "dark" ? "light" : "dark")} style={{
+          width: 36, height: 36, background: "transparent",
+          border: `1px solid ${c.border}`, color: c.gold,
+          cursor: "pointer", borderRadius: 2,
+          display: "flex", alignItems: "center", justifyContent: "center",
+        }}>
+          {theme === "dark" ? <Sun size={15} /> : <Moon size={15} />}
+        </button>
+        <button onClick={onLogout} title={t.signOut} style={{
+          width: 36, height: 36, background: "transparent",
+          border: `1px solid ${c.border}`, color: c.muted,
+          cursor: "pointer", borderRadius: 2,
+          display: "flex", alignItems: "center", justifyContent: "center",
+        }}>
+          <LogOut size={15} />
+        </button>
+      </div>
+
+      {/* Glow background */}
+      <div style={{
+        position: "absolute", inset: 0,
+        background: `radial-gradient(800px 500px at 50% 40%, ${c.gold}10, transparent)`,
+        pointerEvents: "none",
+      }} />
+
+      <div style={{ position: "relative", maxWidth: 720, width: "100%", textAlign: "center" }}>
+        {/* Logo */}
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: 24 }}>
+          <Logo size={48} />
+        </div>
+
+        {/* Brand */}
+        <div style={{ fontFamily: fontNastaliq, fontSize: 40, color: c.gold, lineHeight: 1, marginBottom: 6 }}>
+          قَرار
+        </div>
+        <div style={{
+          fontFamily: fontMono, fontSize: 10, color: c.muted,
+          letterSpacing: "0.25em", textTransform: "uppercase", marginBottom: 56,
+        }}>
+          QARAR · INTELLIGENCE
+        </div>
+
+        {/* Greeting */}
+        <div style={{
+          fontFamily: font(lang), fontSize: 16, color: c.muted,
+          fontStyle: "italic", marginBottom: 12,
+        }}>
+          {isAr ? `أهلاً ${user.name}` : `Hello ${user.name}`}
+        </div>
+
+        {/* Countdown title */}
+        <h1 style={{
+          fontFamily: font(lang), fontSize: 36, fontWeight: 500, color: c.textHi,
+          margin: "0 0 48px", letterSpacing: "-0.01em",
+        }}>
+          {t.countdownTitle}
+        </h1>
+
+        {/* Countdown boxes */}
+        <div style={{
+          display: "grid", gridTemplateColumns: "repeat(4, 1fr)",
+          gap: 16, marginBottom: 56,
+        }}>
+          {units.map((u, i) => (
+            <div key={i} style={{
+              padding: "28px 12px",
+              background: c.surface,
+              border: `1px solid ${c.gold}30`,
+              borderRadius: 4,
+            }}>
+              <div style={{
+                fontFamily: font(lang), fontSize: 48, fontWeight: 500,
+                color: c.textHi, lineHeight: 1, letterSpacing: "-0.02em",
+                fontVariantNumeric: "tabular-nums",
+              }}>
+                {pad(u.v)}
+              </div>
+              <div style={{
+                fontFamily: fontMono, fontSize: 10, color: c.gold,
+                letterSpacing: "0.15em", textTransform: "uppercase", marginTop: 8,
+              }}>
+                {u.l}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Seat info */}
+        <div style={{
+          padding: "20px 24px",
+          background: c.surface2,
+          border: `1px solid ${c.border}`,
+          borderRadius: 4,
+          marginBottom: 24,
+          display: "inline-block",
+        }}>
+          <div style={{
+            fontFamily: fontMono, fontSize: 10, color: c.muted,
+            letterSpacing: "0.2em", textTransform: "uppercase", marginBottom: 6,
+          }}>
+            {t.yourSeat}
+          </div>
+          <div style={{
+            fontFamily: font(lang), fontSize: 32, fontWeight: 500,
+            color: c.gold, lineHeight: 1,
+          }}>
+            #{user.seatNumber} <span style={{ color: c.muted, fontSize: 18 }}>{t.of} {MAX_SEATS}</span>
+          </div>
+        </div>
+
+        {/* Bottom note */}
+        <p style={{
+          fontFamily: font(lang), fontSize: 15, color: c.muted,
+          fontStyle: "italic", margin: "0 0 24px", lineHeight: 1.6,
+        }}>
+          {t.countdownDesc}
+        </p>
+
+        {/* Brand tagline */}
+        <div style={{
+          fontFamily: fontMono, fontSize: 11, color: c.muted,
+          letterSpacing: "0.25em",
+        }}>
+          tasiqarar.com
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* ── Seats Full / Waitlist Screen ───────────────────────────────── */
+
+const SeatsFullScreen = ({ onJoinWaitlist, waitlistCount }) => {
+  const { c, t, lang, setLang, theme, setTheme } = useApp();
+  const [email, setEmail] = useState("");
+  const [joined, setJoined] = useState(false);
+  const [error, setError] = useState("");
+
+  const submit = () => {
+    setError("");
+    if (!email.trim()) {
+      setError(t.authErrorRequired);
+      return;
+    }
+    if (!isValidEmail(email)) {
+      setError(t.authErrorEmail);
+      return;
+    }
+    // Save to waitlist
+    const list = ls.get("qarar:waitlist", []);
+    if (list.find((w) => w.email.toLowerCase() === email.toLowerCase())) {
+      setJoined(true);
+      return;
+    }
+    const updated = [...list, { id: "w" + Date.now(), email: email.trim().toLowerCase(), joinedAt: Date.now() }];
+    ls.set("qarar:waitlist", updated);
+    setJoined(true);
+    if (onJoinWaitlist) onJoinWaitlist(updated);
+  };
+
+  return (
+    <div dir={t.dir} style={{
+      minHeight: "100vh", background: c.ink, color: c.text,
+      fontFamily: font(lang),
+      display: "flex", alignItems: "center", justifyContent: "center", padding: 24,
+      position: "relative",
+    }}>
+      <div style={{ position: "absolute", top: 20, right: 20, display: "flex", gap: 8 }}>
+        <button onClick={() => setLang(lang === "en" ? "ar" : "en")} style={{
+          padding: "8px 12px", background: "transparent",
+          border: `1px solid ${c.border}`, color: c.text,
+          cursor: "pointer", borderRadius: 2,
+          fontFamily: fontMono, fontSize: 11, display: "flex", alignItems: "center", gap: 6,
+        }}>
+          <Languages size={13} color={c.gold} />
+          <span style={{ color: lang === "en" ? c.gold : c.muted }}>EN</span>
+          <span style={{ color: c.border }}>·</span>
+          <span style={{ color: lang === "ar" ? c.gold : c.muted, fontFamily: fontAr }}>ع</span>
+        </button>
+        <button onClick={() => setTheme(theme === "dark" ? "light" : "dark")} style={{
+          width: 36, height: 36, background: "transparent",
+          border: `1px solid ${c.border}`, color: c.gold,
+          cursor: "pointer", borderRadius: 2,
+          display: "flex", alignItems: "center", justifyContent: "center",
+        }}>
+          {theme === "dark" ? <Sun size={15} /> : <Moon size={15} />}
+        </button>
+      </div>
+
+      <div style={{ width: "100%", maxWidth: 480, textAlign: "center" }}>
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: 24 }}>
+          <Logo size={48} />
+        </div>
+        <div style={{ fontFamily: fontNastaliq, fontSize: 36, color: c.gold, marginBottom: 4 }}>
+          قَرار
+        </div>
+        <div style={{
+          fontFamily: fontMono, fontSize: 10, color: c.muted,
+          letterSpacing: "0.25em", textTransform: "uppercase", marginBottom: 48,
+        }}>
+          QARAR · INTELLIGENCE
+        </div>
+
+        <Card style={{ padding: 36 }}>
+          {/* Lock icon */}
+          <div style={{
+            width: 64, height: 64, borderRadius: "50%",
+            border: `1.5px solid ${c.gold}`, background: c.gold + "15",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            margin: "0 auto 24px",
+          }}>
+            <div style={{ fontSize: 30 }}>🔒</div>
+          </div>
+
+          <h2 style={{
+            fontFamily: font(lang), fontSize: 32, color: c.textHi,
+            margin: "0 0 12px", fontWeight: 500,
+          }}>
+            {t.seatsFull}
+          </h2>
+          <p style={{
+            fontFamily: font(lang), fontSize: 15, color: c.muted,
+            margin: "0 0 32px", fontStyle: "italic", lineHeight: 1.6,
+          }}>
+            {t.seatsFullDesc}
+          </p>
+
+          {joined ? (
+            <div style={{
+              padding: 20, background: c.green + "15",
+              border: `1px solid ${c.green}40`, borderRadius: 2,
+            }}>
+              <div style={{ fontSize: 28, marginBottom: 8 }}>✓</div>
+              <div style={{ fontFamily: font(lang), fontSize: 16, color: c.green, fontWeight: 500 }}>
+                {t.waitlistJoined}
+              </div>
+            </div>
+          ) : (
+            <>
+              <div style={{
+                fontFamily: font(lang), fontSize: 14, color: c.text,
+                marginBottom: 16, fontStyle: "italic",
+              }}>
+                {t.waitlistDesc}
+              </div>
+              <Input label={t.waitlistEmail} value={email} onChange={setEmail} type="email" placeholder="email@example.com" />
+              {error && (
+                <div style={{
+                  padding: "10px 12px", background: c.red + "15",
+                  border: `1px solid ${c.red}40`, borderRadius: 2,
+                  fontFamily: font(lang), fontSize: 13, color: c.red,
+                  marginBottom: 12,
+                }}>
+                  {error}
+                </div>
+              )}
+              <Button onClick={submit} fullWidth icon={Sparkles}>
+                {t.waitlistJoin}
+              </Button>
+              {waitlistCount > 0 && (
+                <div style={{
+                  marginTop: 16, fontFamily: fontMono, fontSize: 11,
+                  color: c.muted, letterSpacing: "0.1em",
+                }}>
+                  {waitlistCount} {lang === "ar" ? "في قائمة الانتظار" : "on waitlist"}
+                </div>
+              )}
+            </>
+          )}
+        </Card>
+
+        <div style={{
+          marginTop: 24, fontFamily: font(lang), fontSize: 12,
+          color: c.muted, fontStyle: "italic", lineHeight: 1.6,
+        }}>
+          {t.disclaimer}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* ──────────────────────────────────────────────────────────────────
    AUTH PAGE (Sign In / Sign Up)
    ────────────────────────────────────────────────────────────────── */
 
-const AuthPage = ({ users, setUsers, setCurrentUser }) => {
+const AuthPage = ({ users, setUsers, setCurrentUser, onSignupSuccess }) => {
   const { c, t, lang, setLang, theme, setTheme } = useApp();
   const isAr = lang === "ar";
   const [mode, setMode] = useState("signin"); // signin | signup
@@ -1314,6 +1851,8 @@ const AuthPage = ({ users, setUsers, setCurrentUser }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+
+  const seatsFilled = users.length;
 
   const submit = (e) => {
     e?.preventDefault();
@@ -1332,6 +1871,7 @@ const AuthPage = ({ users, setUsers, setCurrentUser }) => {
       );
       if (exists) { setError(t.authErrorExists); return; }
 
+      const seatNumber = users.length + 1; // 1-based seat number
       const newUser = {
         id: "u" + Date.now(),
         name: name.trim(),
@@ -1339,12 +1879,15 @@ const AuthPage = ({ users, setUsers, setCurrentUser }) => {
         email: email.trim().toLowerCase(),
         passwordHash: simpleHash(password),
         joinedAt: Date.now(),
+        seatNumber, // ← founding seat number
       };
       const updatedUsers = [...users, newUser];
       setUsers(updatedUsers);
       ls.set("qarar:users", updatedUsers);
       ls.set("qarar:session", { userId: newUser.id, time: Date.now() });
       setCurrentUser(newUser);
+      // Signal parent that this is a fresh signup (show congrats)
+      if (onSignupSuccess) onSignupSuccess(newUser);
     } else {
       // signin
       if (!email.trim() || !password) { setError(t.authErrorRequired); return; }
@@ -1421,6 +1964,7 @@ const AuthPage = ({ users, setUsers, setCurrentUser }) => {
           <form onSubmit={submit}>
             {mode === "signup" && (
               <>
+                <SeatCounter filled={seatsFilled} max={MAX_SEATS} />
                 <Input label={t.fullName} value={name} onChange={setName} placeholder={isAr ? "محمد العتيبي" : "John Smith"} />
                 <Input label={t.username} value={username} onChange={setUsername} placeholder={isAr ? "trader_2026" : "trader_2026"} />
               </>
@@ -1440,7 +1984,7 @@ const AuthPage = ({ users, setUsers, setCurrentUser }) => {
             )}
 
             <Button type="submit" fullWidth onClick={submit} icon={mode === "signin" ? Shield : User} style={{ marginTop: 8 }}>
-              {mode === "signin" ? t.signInCta : t.createAccount}
+              {mode === "signin" ? t.signInCta : (mode === "signup" ? t.reserveMySeat : t.createAccount)}
             </Button>
           </form>
 
@@ -2872,10 +3416,38 @@ const AdminLogin = ({ onLogin }) => {
   );
 };
 
-const AdminDashboard = ({ stocks, weekly, users, goto }) => {
+const AdminDashboard = ({ stocks, weekly, users, goto, siteForceOpen, setSiteForceOpen, waitlist }) => {
   const { c, t, lang } = useApp();
   const isAr = lang === "ar";
   const published = stocks.filter((s) => s.published).length;
+  const launchTs = getLaunchDate();
+  const launchReached = isLaunchTimeReached();
+  const siteOpen = siteForceOpen || launchReached;
+
+  // Compute days/hours remaining until launch
+  const diff = Math.max(0, launchTs - Date.now());
+  const daysLeft = Math.floor(diff / (24 * 60 * 60 * 1000));
+  const hoursLeft = Math.floor((diff % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
+
+  const toggleSite = () => {
+    if (siteForceOpen) {
+      if (window.confirm(isAr ? "إقفال الموقع للأعضاء؟" : "Lock the site for members again?")) {
+        ls.set("qarar:siteForceOpen", false);
+        setSiteForceOpen(false);
+      }
+    } else {
+      if (window.confirm(t.openSiteConfirm)) {
+        ls.set("qarar:siteForceOpen", true);
+        setSiteForceOpen(true);
+      }
+    }
+  };
+
+  const launchDateStr = new Date(launchTs).toLocaleDateString(
+    isAr ? "ar-SA" : "en-US",
+    { year: "numeric", month: "long", day: "numeric" }
+  );
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
       <div>
@@ -2885,10 +3457,78 @@ const AdminDashboard = ({ stocks, weekly, users, goto }) => {
         </h1>
       </div>
 
+      {/* LAUNCH CONTROL - prominent card */}
+      <Card style={{
+        padding: 28,
+        background: `linear-gradient(135deg, ${c.surface} 0%, ${c.surface2} 100%)`,
+        border: `1px solid ${siteOpen ? c.green : c.gold}40`,
+      }}>
+        <div style={{
+          display: "flex", justifyContent: "space-between",
+          alignItems: "flex-start", flexWrap: "wrap", gap: 16,
+        }}>
+          <div style={{ flex: 1, minWidth: 280 }}>
+            <SectionLabel accent>
+              {siteOpen ? "🟢" : "🔒"} {t.launchControl}
+            </SectionLabel>
+            <div style={{
+              fontFamily: font(lang), fontSize: 28, color: c.textHi,
+              marginTop: 12, fontWeight: 500,
+            }}>
+              {siteOpen ? t.siteOpen : t.siteLocked}
+            </div>
+            <div style={{
+              fontFamily: font(lang), fontSize: 14, color: c.muted,
+              marginTop: 6, fontStyle: "italic",
+            }}>
+              {siteOpen
+                ? (siteForceOpen
+                    ? (isAr ? "أنت فتحت الموقع يدوياً." : "You manually opened the site.")
+                    : (isAr ? "العدّ التنازلي انتهى، الموقع مفتوح." : "Countdown ended, site is open."))
+                : `${t.launchDate}: ${launchDateStr}`}
+            </div>
+          </div>
+          <Button
+            onClick={toggleSite}
+            variant={siteForceOpen ? "danger" : "primary"}
+            icon={siteForceOpen ? Shield : Sparkles}
+          >
+            {siteForceOpen ? t.lockSiteAgain : t.openSiteNow}
+          </Button>
+        </div>
+
+        {!siteOpen && (
+          <div style={{
+            display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginTop: 20,
+          }}>
+            <div style={{ padding: 16, background: c.surface, borderRadius: 2 }}>
+              <div style={{ fontFamily: fontMono, fontSize: 10, color: c.muted, letterSpacing: "0.15em", textTransform: "uppercase" }}>
+                {isAr ? "أيام متبقية" : "Days left"}
+              </div>
+              <div style={{ fontFamily: font(lang), fontSize: 32, color: c.gold, fontWeight: 500, marginTop: 4 }}>
+                {daysLeft}
+              </div>
+            </div>
+            <div style={{ padding: 16, background: c.surface, borderRadius: 2 }}>
+              <div style={{ fontFamily: fontMono, fontSize: 10, color: c.muted, letterSpacing: "0.15em", textTransform: "uppercase" }}>
+                {isAr ? "ساعات متبقية" : "Hours left"}
+              </div>
+              <div style={{ fontFamily: font(lang), fontSize: 32, color: c.gold, fontWeight: 500, marginTop: 4 }}>
+                {hoursLeft}
+              </div>
+            </div>
+          </div>
+        )}
+      </Card>
+
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16 }}>
-        <Card style={{ padding: 20 }}><Stat label={t.publishedAnalyses} value={published} accent={c.gold} /></Card>
-        <Card style={{ padding: 20 }}><Stat label={isAr ? "إجمالي التحليلات" : "Total Analyses"} value={stocks.length} accent={c.blue} /></Card>
-        <Card style={{ padding: 20 }}><Stat label={t.totalUsers} value={users.length} accent={c.green} /></Card>
+        <Card style={{ padding: 20 }}>
+          <Stat label={t.seatsCount} value={`${users.length} / ${MAX_SEATS}`}
+            sub={users.length >= MAX_SEATS ? t.seatsFull : `${MAX_SEATS - users.length} ${t.seatsLeft}`}
+            accent={users.length >= MAX_SEATS ? c.red : c.gold} />
+        </Card>
+        <Card style={{ padding: 20 }}><Stat label={t.waitlistCount} value={waitlist.length} accent={c.blue} /></Card>
+        <Card style={{ padding: 20 }}><Stat label={t.publishedAnalyses} value={published} accent={c.green} /></Card>
         <Card style={{ padding: 20 }}><Stat label={isAr ? "أسبوع الفيديو" : "Video Week"} value={weekly.week} accent={c.amber} /></Card>
       </div>
 
@@ -3325,60 +3965,142 @@ const AdminWeekly = ({ weekly, setWeekly }) => {
   );
 };
 
-const AdminUsers = ({ users }) => {
+const AdminUsers = ({ users, waitlist, setWaitlist }) => {
   const { c, t, lang } = useApp();
   const isAr = lang === "ar";
+  const [tab, setTab] = useState("members"); // members | waitlist
+
+  // Sort users by seat number
+  const sortedUsers = [...users].sort((a, b) => (a.seatNumber || 0) - (b.seatNumber || 0));
+
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
-        <h2 style={{ fontFamily: font(lang), fontSize: 36, color: c.textHi, margin: 0, fontWeight: 500 }}>{t.registeredUsers}</h2>
-        <Pill color={c.gold}><Users size={11} /> {t.totalUsers}: {users.length}</Pill>
+        <h2 style={{ fontFamily: font(lang), fontSize: 36, color: c.textHi, margin: 0, fontWeight: 500 }}>
+          {tab === "members" ? t.registeredUsers : t.waitlistTab}
+        </h2>
+        <div style={{ display: "flex", gap: 4 }}>
+          <button onClick={() => setTab("members")} style={{
+            padding: "9px 16px",
+            background: tab === "members" ? c.gold + "20" : "transparent",
+            color: tab === "members" ? c.gold : c.muted,
+            border: `1px solid ${tab === "members" ? c.gold + "70" : c.border}`,
+            fontFamily: font(lang), fontSize: 13, fontWeight: 500,
+            cursor: "pointer", borderRadius: 2,
+          }}>
+            👤 {t.registeredUsers} · {users.length}
+          </button>
+          <button onClick={() => setTab("waitlist")} style={{
+            padding: "9px 16px",
+            background: tab === "waitlist" ? c.gold + "20" : "transparent",
+            color: tab === "waitlist" ? c.gold : c.muted,
+            border: `1px solid ${tab === "waitlist" ? c.gold + "70" : c.border}`,
+            fontFamily: font(lang), fontSize: 13, fontWeight: 500,
+            cursor: "pointer", borderRadius: 2,
+          }}>
+            ⏳ {t.waitlistTab} · {waitlist?.length || 0}
+          </button>
+        </div>
       </div>
 
-      <Card style={{ padding: 0 }}>
-        {users.length === 0 ? (
-          <div style={{ padding: 60, textAlign: "center", color: c.muted, fontFamily: font(lang), fontStyle: "italic", fontSize: 18 }}>
-            {t.noUsers}
-          </div>
-        ) : (
-          <>
-            <div style={{
-              display: "grid", gridTemplateColumns: "1.5fr 1.2fr 2fr 1fr",
-              padding: "16px 24px", borderBottom: `1px solid ${c.border}`,
-              fontFamily: fontMono, fontSize: 10, color: c.muted,
-              letterSpacing: "0.1em", textTransform: "uppercase", gap: 16,
-            }}>
-              <div>{t.fullName}</div>
-              <div>{t.username}</div>
-              <div>{t.email}</div>
-              <div>{t.joined}</div>
+      {tab === "members" ? (
+        <Card style={{ padding: 0 }}>
+          {sortedUsers.length === 0 ? (
+            <div style={{ padding: 60, textAlign: "center", color: c.muted, fontFamily: font(lang), fontStyle: "italic", fontSize: 18 }}>
+              {t.noUsers}
             </div>
-            {users.map((u, i) => (
-              <div key={u.id} style={{
-                display: "grid", gridTemplateColumns: "1.5fr 1.2fr 2fr 1fr",
-                padding: "18px 24px",
-                borderBottom: i === users.length - 1 ? "none" : `1px solid ${c.border}`,
-                alignItems: "center", gap: 16,
+          ) : (
+            <>
+              <div style={{
+                display: "grid", gridTemplateColumns: "80px 1.5fr 1.2fr 2fr 1fr",
+                padding: "16px 24px", borderBottom: `1px solid ${c.border}`,
+                fontFamily: fontMono, fontSize: 10, color: c.muted,
+                letterSpacing: "0.1em", textTransform: "uppercase", gap: 16,
               }}>
-                <div style={{ fontFamily: font(lang), fontSize: 16, color: c.textHi, fontWeight: 500 }}>{u.name}</div>
-                <div style={{ fontFamily: fontMono, fontSize: 13, color: c.gold }}>@{u.username}</div>
-                <div style={{ fontFamily: fontMono, fontSize: 13, color: c.text }}>{u.email}</div>
-                <div style={{ fontFamily: fontMono, fontSize: 11, color: c.muted }}>
-                  {new Date(u.joinedAt).toLocaleDateString(isAr ? "ar-SA" : "en-US")}
-                </div>
+                <div>{isAr ? "المقعد" : "Seat"}</div>
+                <div>{t.fullName}</div>
+                <div>{t.username}</div>
+                <div>{t.email}</div>
+                <div>{t.joined}</div>
               </div>
-            ))}
-          </>
-        )}
-      </Card>
+              {sortedUsers.map((u, i) => (
+                <div key={u.id} style={{
+                  display: "grid", gridTemplateColumns: "80px 1.5fr 1.2fr 2fr 1fr",
+                  padding: "18px 24px",
+                  borderBottom: i === sortedUsers.length - 1 ? "none" : `1px solid ${c.border}`,
+                  alignItems: "center", gap: 16,
+                }}>
+                  <div style={{
+                    fontFamily: font(lang), fontSize: 18, color: c.gold,
+                    fontWeight: 600, letterSpacing: "-0.01em",
+                  }}>
+                    #{u.seatNumber || "—"}
+                  </div>
+                  <div style={{ fontFamily: font(lang), fontSize: 16, color: c.textHi, fontWeight: 500 }}>{u.name}</div>
+                  <div style={{ fontFamily: fontMono, fontSize: 13, color: c.gold }}>@{u.username}</div>
+                  <div style={{ fontFamily: fontMono, fontSize: 13, color: c.text }}>{u.email}</div>
+                  <div style={{ fontFamily: fontMono, fontSize: 11, color: c.muted }}>
+                    {new Date(u.joinedAt).toLocaleDateString(isAr ? "ar-SA" : "en-US")}
+                  </div>
+                </div>
+              ))}
+            </>
+          )}
+        </Card>
+      ) : (
+        <Card style={{ padding: 0 }}>
+          {!waitlist || waitlist.length === 0 ? (
+            <div style={{ padding: 60, textAlign: "center", color: c.muted, fontFamily: font(lang), fontStyle: "italic", fontSize: 18 }}>
+              {isAr ? "لا أحد في قائمة الانتظار بعد." : "No one on the waitlist yet."}
+            </div>
+          ) : (
+            <>
+              <div style={{
+                display: "grid", gridTemplateColumns: "60px 3fr 1fr 100px",
+                padding: "16px 24px", borderBottom: `1px solid ${c.border}`,
+                fontFamily: fontMono, fontSize: 10, color: c.muted,
+                letterSpacing: "0.1em", textTransform: "uppercase", gap: 16,
+              }}>
+                <div>#</div>
+                <div>{t.email}</div>
+                <div>{t.joined}</div>
+                <div></div>
+              </div>
+              {waitlist.map((w, i) => (
+                <div key={w.id} style={{
+                  display: "grid", gridTemplateColumns: "60px 3fr 1fr 100px",
+                  padding: "16px 24px",
+                  borderBottom: i === waitlist.length - 1 ? "none" : `1px solid ${c.border}`,
+                  alignItems: "center", gap: 16,
+                }}>
+                  <div style={{ fontFamily: fontMono, fontSize: 13, color: c.muted }}>{i + 1}</div>
+                  <div style={{ fontFamily: fontMono, fontSize: 14, color: c.textHi }}>{w.email}</div>
+                  <div style={{ fontFamily: fontMono, fontSize: 11, color: c.muted }}>
+                    {new Date(w.joinedAt).toLocaleDateString(isAr ? "ar-SA" : "en-US")}
+                  </div>
+                  <Button variant="danger" size="sm" icon={Trash2}
+                    onClick={() => {
+                      if (window.confirm(isAr ? "حذف هذا البريد من القائمة؟" : "Remove this email from waitlist?")) {
+                        const updated = waitlist.filter((x) => x.id !== w.id);
+                        setWaitlist(updated);
+                        ls.set("qarar:waitlist", updated);
+                      }
+                    }}
+                  />
+                </div>
+              ))}
+            </>
+          )}
+        </Card>
+      )}
 
       <div style={{
         marginTop: 24, padding: 16, background: c.surface2,
         borderRadius: 2, fontFamily: font(lang), fontSize: 13, color: c.muted, lineHeight: 1.6,
       }}>
         {isAr
-          ? "ملاحظة: المستخدمون مخزّنون محلياً في متصفح كل مستخدم. لاحقاً عند ربط قاعدة بيانات حقيقية، ستكون قائمة موحدة لكل المستخدمين."
-          : "Note: Users are stored locally in each user's browser. When a real database is connected, this will become a unified list across all users."}
+          ? "ملاحظة: المستخدمون وقائمة الانتظار مخزّنون محلياً في متصفحك. لمشاركة الأعضاء بين كل الأجهزة لاحقاً، نحتاج Supabase."
+          : "Note: Users and waitlist are stored locally in your browser. To share members across devices, we'll need Supabase later."}
       </div>
     </div>
   );
@@ -3441,14 +4163,43 @@ export default function Qarar() {
   });
   const [weekly, setWeekly] = useState(() => ls.get("qarar:weekly", DEFAULT_WEEKLY));
 
-  // Users (auth)
-  const [users, setUsers] = useState(() => ls.get("qarar:users", []));
+  // Users (auth) — with seat number migration
+  const [users, setUsers] = useState(() => {
+    const stored = ls.get("qarar:users", []);
+    // Migrate: ensure every user has a seatNumber (based on join order)
+    const sorted = [...stored].sort((a, b) => (a.joinedAt || 0) - (b.joinedAt || 0));
+    const migrated = sorted.map((u, idx) => ({
+      ...u,
+      seatNumber: u.seatNumber || (idx + 1),
+    }));
+    if (migrated.length !== stored.length || migrated.some((u, i) => u.seatNumber !== stored[i]?.seatNumber)) {
+      ls.set("qarar:users", migrated);
+    }
+    return migrated;
+  });
   const [currentUser, setCurrentUser] = useState(() => {
     const session = ls.get("qarar:session", null);
     if (!session) return null;
     const allUsers = ls.get("qarar:users", []);
     return allUsers.find((u) => u.id === session.userId) || null;
   });
+
+  // Launch state — admin can force unlock, otherwise countdown
+  const [siteForceOpen, setSiteForceOpen] = useState(() => ls.get("qarar:siteForceOpen", false));
+  // Track if user JUST signed up (to show congrats screen briefly)
+  const [justSignedUp, setJustSignedUp] = useState(false);
+  // Waitlist (for visitors after seats fill)
+  const [waitlist, setWaitlist] = useState(() => ls.get("qarar:waitlist", []));
+
+  // Initialize launch date on first load (just to materialize the value)
+  useEffect(() => { getLaunchDate(); }, []);
+
+  // Auto re-check launch time every minute so site can naturally unlock
+  const [, setLaunchTick] = useState(0);
+  useEffect(() => {
+    const interval = setInterval(() => setLaunchTick((x) => x + 1), 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   const c = THEMES[theme];
   const t = STRINGS[lang];
@@ -3499,11 +4250,11 @@ export default function Qarar() {
 
     const renderAdminPage = () => {
       switch (adminPage) {
-        case "dashboard": return <AdminDashboard stocks={stocks} weekly={weekly} users={users} goto={setAdminPage} />;
+        case "dashboard": return <AdminDashboard stocks={stocks} weekly={weekly} users={users} goto={setAdminPage} siteForceOpen={siteForceOpen} setSiteForceOpen={setSiteForceOpen} waitlist={waitlist} />;
         case "stocks": return <AdminStocks stocks={stocks} setStocks={setStocks} />;
         case "market": return <AdminMarket market={market} setMarket={setMarket} />;
         case "weekly": return <AdminWeekly weekly={weekly} setWeekly={setWeekly} />;
-        case "users": return <AdminUsers users={users} />;
+        case "users": return <AdminUsers users={users} waitlist={waitlist} setWaitlist={setWaitlist} />;
         default: return <AdminDashboard stocks={stocks} weekly={weekly} users={users} goto={setAdminPage} />;
       }
     };
@@ -3586,16 +4337,59 @@ export default function Qarar() {
     );
   }
 
-  // ── User mode: must be authenticated ──
+  // ── User mode: launch system ──
+  const seatsAreFull = users.length >= MAX_SEATS;
+  const launchReady = siteForceOpen || isLaunchTimeReached();
+
+  // CASE 1: Visitor not signed in
   if (!currentUser) {
+    // If seats full, show waitlist screen
+    if (seatsAreFull) {
+      return (
+        <AppContext.Provider value={ctx}>
+          <GlobalStyles c={c} />
+          <SeatsFullScreen
+            onJoinWaitlist={(updated) => setWaitlist(updated)}
+            waitlistCount={waitlist.length}
+          />
+        </AppContext.Provider>
+      );
+    }
+    // Otherwise show auth page (with seat counter inside)
     return (
       <AppContext.Provider value={ctx}>
         <GlobalStyles c={c} />
-        <AuthPage users={users} setUsers={setUsers} setCurrentUser={setCurrentUser} />
+        <AuthPage
+          users={users}
+          setUsers={setUsers}
+          setCurrentUser={setCurrentUser}
+          onSignupSuccess={() => setJustSignedUp(true)}
+        />
       </AppContext.Provider>
     );
   }
 
+  // CASE 2: User just signed up — show congrats briefly
+  if (justSignedUp) {
+    return (
+      <AppContext.Provider value={ctx}>
+        <GlobalStyles c={c} />
+        <CongratsScreen user={currentUser} onContinue={() => setJustSignedUp(false)} />
+      </AppContext.Provider>
+    );
+  }
+
+  // CASE 3: User logged in but launch hasn't happened yet
+  if (!launchReady) {
+    return (
+      <AppContext.Provider value={ctx}>
+        <GlobalStyles c={c} />
+        <CountdownScreen user={currentUser} onLogout={userLogout} />
+      </AppContext.Provider>
+    );
+  }
+
+  // CASE 4: User logged in AND launch ready — full site
   const renderPage = () => {
     switch (page) {
       case "home": return <HomePage go={goto} stocks={stocks} market={market} />;
