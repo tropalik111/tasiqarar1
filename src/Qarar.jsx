@@ -116,10 +116,32 @@ const STRINGS = {
     authErrorPassword: "Password must be at least 6 characters",
     authErrorExists: "This email or username already exists",
     authErrorInvalid: "Invalid email or password",
+    authErrorSuspiciousEmail: "Please use a real email (Gmail, Hotmail, Outlook, iCloud, etc.). Test or disposable emails aren't allowed.",
     forgotPasswordTitle: "Forgot your password?",
+    // Locked content (visitor preview)
+    lockedHint: "Reserve your founder seat to unlock the full analysis, scenarios, and weekly video.",
+    lockedCta: "Reserve My Founder Seat",
+    lockedMeta: "Free · Limited to 100 founding members",
+    lockedScenario: "Read the full scenario",
+    lockedAnalysis: "Read the detailed analysis",
+    lockedVideo: "Watch the weekly review",
+    lockedQuote: "Read Qarar's market synthesis",
+    lockedPageTitle: "Members-only area",
+    lockedPageBody: "This section is part of the founder experience — portfolio tracking, journal entries, and post-trade lessons.",
+    lockedPageBoxTitle: "Join the founders to unlock",
+    lockedPageBoxHint: "Reserve your free founder seat to track trades, record lessons, and grow as a disciplined investor.",
+    signInNav: "Sign in",
+    signUpNav: "Sign up",
     forgotPasswordBody: "No worries. Email us with your registered email and we'll reset your password within 24 hours.",
     forgotPasswordCta: "Contact Support",
     supportEmail: "help@tasiqarar.com",
+    openPrice: "Open Price",
+    closePrice: "Close Price",
+    pricesSection: "Today's Prices",
+    pricesHint: "Update daily for the ticker and market page",
+    colOpen: "Open",
+    colClose: "Close",
+    colChange: "Change",
     welcomeBack: "Welcome back",
     // Launch / Countdown (NEW)
     seatsLeft: "seats remaining",
@@ -376,10 +398,32 @@ const STRINGS = {
     authErrorPassword: "كلمة المرور يجب أن تكون ٦ أحرف على الأقل",
     authErrorExists: "البريد الإلكتروني أو اسم المستخدم موجود مسبقاً",
     authErrorInvalid: "البريد أو كلمة المرور غير صحيحة",
+    authErrorSuspiciousEmail: "الرجاء استخدام بريد إلكتروني حقيقي (Gmail، Hotmail، Outlook، iCloud، إلخ). البرايد التجريبية والمؤقتة غير مسموح بها.",
     forgotPasswordTitle: "نسيت كلمة المرور؟",
+    // محتوى مقفل (معاينة الزائر)
+    lockedHint: "احجز مقعدك المؤسس لفتح التحليل الكامل والسيناريوهات وفيديو الجمعة الأسبوعي.",
+    lockedCta: "احجز مقعدي المؤسس",
+    lockedMeta: "مجاناً · محدود لـ ١٠٠ عضو مؤسس",
+    lockedScenario: "اقرأ السيناريو كاملاً",
+    lockedAnalysis: "اقرأ التحليل التفصيلي",
+    lockedVideo: "شاهد المراجعة الأسبوعية",
+    lockedQuote: "اقرأ توليفة قَرار للسوق",
+    lockedPageTitle: "منطقة الأعضاء",
+    lockedPageBody: "هذا القسم جزء من تجربة الأعضاء المؤسسين — متابعة المحفظة، يوميات التداول، ودروس ما بعد الصفقة.",
+    lockedPageBoxTitle: "انضم للمؤسسين لفتح هذا القسم",
+    lockedPageBoxHint: "احجز مقعدك المؤسس المجاني لمتابعة صفقاتك، تدوين الدروس، والنمو كمستثمر منضبط.",
+    signInNav: "تسجيل دخول",
+    signUpNav: "إنشاء حساب",
     forgotPasswordBody: "لا تقلق. أرسل لنا إيميل من بريدك المسجّل وسنُعيد تعيين كلمة المرور خلال ٢٤ ساعة.",
     forgotPasswordCta: "تواصل مع الدعم",
     supportEmail: "help@tasiqarar.com",
+    openPrice: "سعر الافتتاح",
+    closePrice: "سعر الإغلاق",
+    pricesSection: "أسعار اليوم",
+    pricesHint: "حدّثها يومياً للشريط وصفحة السوق",
+    colOpen: "افتتاح",
+    colClose: "إغلاق",
+    colChange: "التغير",
     welcomeBack: "أهلاً بعودتك",
     // Launch / Countdown (NEW)
     seatsLeft: "مقعد متبقّي",
@@ -815,6 +859,26 @@ const timeAgo = (ts, lang) => {
 
 const isValidEmail = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 
+// Reject known fake/test/disposable email domains
+const SUSPICIOUS_EMAIL_DOMAINS = [
+  // Test/example domains
+  "example.com", "example.org", "example.net", "test.com", "test.org",
+  "fake.com", "demo.com", "sample.com", "invalid.com", "localhost",
+  // Disposable email providers
+  "mailinator.com", "tempmail.com", "temp-mail.org", "guerrillamail.com",
+  "yopmail.com", "throwaway.email", "10minutemail.com", "trashmail.com",
+  "fakeinbox.com", "sharklasers.com", "dispostable.com", "mailnesia.com",
+  "tempinbox.com", "getairmail.com", "maildrop.cc", "minutemail.com",
+  "spam4.me", "deadaddress.com", "burnermail.io",
+];
+
+const isSuspiciousEmail = (email) => {
+  if (!email || typeof email !== "string") return false;
+  const domain = email.toLowerCase().split("@")[1];
+  if (!domain) return false;
+  return SUSPICIOUS_EMAIL_DOMAINS.includes(domain);
+};
+
 // Simple password obfuscation (NOT real security — for localStorage demo only)
 const simpleHash = (s) => {
   let h = 0;
@@ -945,6 +1009,140 @@ const Button = ({ children, onClick, variant = "primary", icon: Icon, size = "md
       {Icon && <Icon size={size === "sm" ? 12 : 16} />}
       {children}
     </button>
+  );
+};
+
+/* ──────────────────────────────────────────────────────────────────
+   LockedSection — small inline lock overlay shown to visitors over
+   premium content (scenario, analysis, video, etc.)
+   ────────────────────────────────────────────────────────────────── */
+
+const LockedSection = ({ onSignIn, title, hint, minHeight = 180 }) => {
+  const { c, t, lang } = useApp();
+  return (
+    <Card style={{
+      padding: 0, overflow: "hidden", position: "relative",
+      background: `linear-gradient(135deg, ${c.surface} 0%, ${c.surface2} 100%)`,
+    }}>
+      <div style={{
+        padding: 32,
+        minHeight,
+        display: "flex", flexDirection: "column",
+        alignItems: "center", justifyContent: "center",
+        textAlign: "center", gap: 16,
+        position: "relative",
+      }}>
+        {/* Lock icon circle */}
+        <div style={{
+          width: 56, height: 56, borderRadius: "50%",
+          border: `1.5px solid ${c.gold}80`,
+          background: c.gold + "12",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          fontSize: 24,
+        }}>
+          🔒
+        </div>
+
+        {/* Title */}
+        {title && (
+          <div style={{
+            fontFamily: font(lang), fontSize: 22, color: c.textHi,
+            fontWeight: 500, lineHeight: 1.3, maxWidth: 360,
+          }}>
+            {title}
+          </div>
+        )}
+
+        {/* Subtle line */}
+        <div style={{
+          fontFamily: font(lang), fontSize: 14, color: c.muted,
+          maxWidth: 380, lineHeight: 1.6,
+        }}>
+          {hint || t.lockedHint}
+        </div>
+
+        {/* CTA */}
+        <button onClick={onSignIn} style={{
+          marginTop: 8,
+          padding: "12px 24px",
+          background: c.gold, color: c.ink,
+          border: `1px solid ${c.gold}`,
+          fontFamily: font(lang), fontSize: 14, fontWeight: 600,
+          cursor: "pointer", borderRadius: 2,
+          letterSpacing: "0.02em",
+        }}>
+          {t.lockedCta}
+        </button>
+
+        {/* Tiny meta — seats info */}
+        <div style={{
+          marginTop: 4, fontFamily: fontMono, fontSize: 10,
+          color: c.muted, letterSpacing: "0.15em", textTransform: "uppercase",
+        }}>
+          {t.lockedMeta}
+        </div>
+      </div>
+    </Card>
+  );
+};
+
+/* ──────────────────────────────────────────────────────────────────
+   LockedPage — full-page lock used for member-only pages
+   (Portfolio, Journal)
+   ────────────────────────────────────────────────────────────────── */
+
+const LockedPage = ({ onSignIn, title }) => {
+  const { c, t, lang } = useApp();
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+      <Card style={{ padding: 40 }}>
+        <SectionLabel accent>{title}</SectionLabel>
+        <h1 style={{
+          fontFamily: font(lang), fontSize: 44, fontWeight: 500,
+          color: c.textHi, margin: "16px 0 0", letterSpacing: "-0.02em",
+        }}>
+          {t.lockedPageTitle}
+        </h1>
+        <p style={{
+          fontFamily: font(lang), fontSize: 18, color: c.text,
+          marginTop: 14, lineHeight: 1.6, fontStyle: "italic", fontWeight: 300,
+          maxWidth: 640,
+        }}>
+          {t.lockedPageBody}
+        </p>
+      </Card>
+
+      <LockedSection
+        onSignIn={onSignIn}
+        title={t.lockedPageBoxTitle}
+        hint={t.lockedPageBoxHint}
+        minHeight={240}
+      />
+    </div>
+  );
+};
+
+/* ──────────────────────────────────────────────────────────────────
+   PreviewSnippet — show first ~110 chars of text then a soft fade
+   ────────────────────────────────────────────────────────────────── */
+
+const PreviewSnippet = ({ text, maxChars = 140 }) => {
+  const { c, lang } = useApp();
+  if (!text) return null;
+  const snippet = text.length > maxChars ? text.slice(0, maxChars).trim() + "…" : text;
+  return (
+    <div style={{
+      fontFamily: font(lang), fontSize: 16, color: c.text,
+      lineHeight: 1.7, position: "relative",
+      maxHeight: 90, overflow: "hidden",
+    }}>
+      {snippet}
+      <div style={{
+        position: "absolute", bottom: 0, left: 0, right: 0, height: 40,
+        background: `linear-gradient(to bottom, transparent, ${c.surface})`,
+        pointerEvents: "none",
+      }} />
+    </div>
   );
 };
 
@@ -1116,312 +1314,65 @@ const ChartImageSlider = ({ images }) => {
   );
 };
 
-/* ── TradingView News Widget ───────────────────────────────────── */
+/* ──────────────────────────────────────────────────────────────────
+   PriceTicker — manual, lightweight price ticker fed from Supabase
+   Shows: sym · name · open → close · change%
+   ────────────────────────────────────────────────────────────────── */
 
-const TradingViewNews = ({ symbol }) => {
-  const { c, t, lang, theme } = useApp();
-  const containerRef = useRef(null);
+const PriceTicker = ({ stocks = [] }) => {
+  const { c, lang } = useApp();
+  const isAr = lang === "ar";
 
-  useEffect(() => {
-    if (!containerRef.current || !symbol) return;
-    // Clear previous widget
-    containerRef.current.innerHTML = "";
-
-    const script = document.createElement("script");
-    script.src = "https://s3.tradingview.com/external-embedding/embed-widget-timeline.js";
-    script.async = true;
-    script.type = "text/javascript";
-    // Use "all_symbols" feed mode — broader news coverage including Saudi stocks
-    script.innerHTML = JSON.stringify({
-      feedMode: "all_symbols",
-      isTransparent: true,
-      displayMode: "regular",
-      width: "100%",
-      height: 460,
-      colorTheme: theme === "dark" ? "dark" : "light",
-      locale: lang === "ar" ? "ar_AE" : "en",
-    });
-    containerRef.current.appendChild(script);
-
-    return () => {
-      if (containerRef.current) containerRef.current.innerHTML = "";
-    };
-  }, [symbol, lang, theme]);
-
-  if (!symbol) return null;
-
-  return (
-    <Card style={{ padding: 0, overflow: "hidden" }}>
-      <div style={{
-        padding: "20px 28px 16px",
-        borderBottom: `1px solid ${c.border}`,
-        display: "flex", justifyContent: "space-between", alignItems: "baseline",
-        flexWrap: "wrap", gap: 8,
-      }}>
-        <h3 style={{ fontFamily: font(lang), fontSize: 22, fontWeight: 500, color: c.textHi, margin: 0 }}>
-          {t.news} <span style={{ fontStyle: "italic", color: c.gold }}>{t.liveFromTradingView}</span>
-        </h3>
-        <SectionLabel>Markets · Live</SectionLabel>
-      </div>
-      <div ref={containerRef} className="tradingview-widget-container" style={{ minHeight: 460, padding: 8 }} />
-    </Card>
+  // Only show stocks with valid open/close prices
+  const visible = stocks.filter(
+    (s) => (s.open ?? 0) > 0 && (s.close ?? 0) > 0
   );
-};
 
-/* ──────────────────────────────────────────────────────────────────
-   TradingView Ticker Tape — horizontal price strip for header
-   ────────────────────────────────────────────────────────────────── */
+  if (visible.length === 0) return null;
 
-const TradingViewTicker = ({ symbols = [] }) => {
-  const { lang, theme } = useApp();
-  const containerRef = useRef(null);
-
-  useEffect(() => {
-    if (!containerRef.current) return;
-    containerRef.current.innerHTML = "";
-
-    // Normalize symbol — handle if user already added TADAWUL: prefix
-    const normalize = (sym) => {
-      const s = String(sym || "").trim();
-      if (!s) return null;
-      if (s.includes(":")) return s; // already has exchange prefix
-      return `TADAWUL:${s}`;
-    };
-
-    // Build symbols list — start with TASI index, then user's stocks
-    const userSymbols = symbols
-      .map((s) => ({ proName: normalize(s.sym), title: s.title || s.sym }))
-      .filter((s) => s.proName);
-
-    const finalSymbols = userSymbols.length > 0
-      ? [
-          { proName: "TADAWUL:TASI", title: "TASI" },
-          ...userSymbols,
-        ]
-      : [
-          { proName: "TADAWUL:TASI", title: "TASI" },
-          { proName: "TADAWUL:2222", title: "Aramco" },
-          { proName: "TADAWUL:1180", title: "Al Rajhi" },
-          { proName: "TADAWUL:2010", title: "SABIC" },
-          { proName: "TADAWUL:1211", title: "Maaden" },
-          { proName: "TADAWUL:1120", title: "Al Rajhi Bank" },
-        ];
-
-    const script = document.createElement("script");
-    script.src = "https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js";
-    script.async = true;
-    script.type = "text/javascript";
-    script.innerHTML = JSON.stringify({
-      symbols: finalSymbols,
-      showSymbolLogo: false,
-      isTransparent: true,
-      displayMode: "adaptive",
-      colorTheme: theme === "dark" ? "dark" : "light",
-      locale: lang === "ar" ? "ar_AE" : "en",
-    });
-    containerRef.current.appendChild(script);
-
-    return () => { if (containerRef.current) containerRef.current.innerHTML = ""; };
-  }, [symbols, lang, theme]);
+  // Duplicate for seamless scroll
+  const items = [...visible, ...visible];
 
   return (
-    <div ref={containerRef} className="tradingview-widget-container"
-      style={{ width: "100%", minHeight: 46 }} />
-  );
-};
-
-/* ──────────────────────────────────────────────────────────────────
-   TradingView Advanced Chart — main chart for stock pages
-   ────────────────────────────────────────────────────────────────── */
-
-const TradingViewChart = ({ symbol, height = 500 }) => {
-  const { c, t, lang, theme } = useApp();
-  const containerRef = useRef(null);
-
-  // Normalize: if user typed "TADAWUL:2222" or just "2222", produce the right format
-  const normalizedSymbol = useMemo(() => {
-    const s = String(symbol || "").trim();
-    if (!s) return null;
-    return s.includes(":") ? s : `TADAWUL:${s}`;
-  }, [symbol]);
-
-  useEffect(() => {
-    if (!containerRef.current || !normalizedSymbol) return;
-    containerRef.current.innerHTML = "";
-
-    const script = document.createElement("script");
-    script.src = "https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js";
-    script.async = true;
-    script.type = "text/javascript";
-    script.innerHTML = JSON.stringify({
-      autosize: true,
-      symbol: normalizedSymbol,
-      interval: "D",
-      timezone: "Asia/Riyadh",
-      theme: theme === "dark" ? "dark" : "light",
-      style: "1",
-      locale: lang === "ar" ? "ar_AE" : "en",
-      enable_publishing: false,
-      allow_symbol_change: false,
-      save_image: false,
-      hide_side_toolbar: false,
-      hide_top_toolbar: false,
-      hide_legend: false,
-      withdateranges: true,
-      details: false,
-      hotlist: false,
-      calendar: false,
-      backgroundColor: theme === "dark" ? "#11161D" : "#FFFFFF",
-      gridColor: theme === "dark" ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)",
-    });
-    containerRef.current.appendChild(script);
-
-    return () => { if (containerRef.current) containerRef.current.innerHTML = ""; };
-  }, [normalizedSymbol, lang, theme]);
-
-  if (!normalizedSymbol) return null;
-
-  return (
-    <Card style={{ padding: 0, overflow: "hidden" }}>
+    <div style={{
+      width: "100%", overflow: "hidden",
+      background: c.surface, borderBottom: `1px solid ${c.border}`,
+      position: "relative",
+    }}>
       <div style={{
-        padding: "20px 28px 16px",
-        borderBottom: `1px solid ${c.border}`,
-        display: "flex", justifyContent: "space-between", alignItems: "baseline",
-        flexWrap: "wrap", gap: 8,
+        display: "flex",
+        animation: `qararTickerScroll ${Math.max(20, visible.length * 6)}s linear infinite`,
+        whiteSpace: "nowrap",
+        padding: "8px 0",
       }}>
-        <h3 style={{ fontFamily: font(lang), fontSize: 22, fontWeight: 500, color: c.textHi, margin: 0 }}>
-          {t.liveChart}
-        </h3>
-        <SectionLabel>{normalizedSymbol}</SectionLabel>
+        {items.map((s, i) => {
+          const change = s.close - s.open;
+          const changePct = s.open > 0 ? (change / s.open) * 100 : 0;
+          const up = change >= 0;
+          return (
+            <div key={`${s.id}-${i}`} style={{
+              display: "inline-flex", alignItems: "center", gap: 8,
+              padding: "0 18px",
+              borderRight: !isAr ? `1px solid ${c.border}` : "none",
+              borderLeft: isAr ? `1px solid ${c.border}` : "none",
+              fontFamily: fontMono, fontSize: 12,
+            }}>
+              <span style={{ color: c.muted, fontWeight: 600 }}>{s.sym}</span>
+              <span style={{ color: c.text }}>{fmt(s.close, 2, lang)}</span>
+              <span style={{ color: up ? c.green : c.red, fontWeight: 600 }}>
+                {up ? "▲" : "▼"} {fmt(Math.abs(changePct), 2, lang)}%
+              </span>
+            </div>
+          );
+        })}
       </div>
-      <div ref={containerRef} className="tradingview-widget-container"
-        style={{ height, width: "100%" }} />
-    </Card>
-  );
-};
-
-/* ──────────────────────────────────────────────────────────────────
-   TradingView Symbol Info — compact price summary
-   ────────────────────────────────────────────────────────────────── */
-
-const TradingViewSymbolInfo = ({ symbol }) => {
-  const { lang, theme } = useApp();
-  const containerRef = useRef(null);
-
-  const normalizedSymbol = useMemo(() => {
-    const s = String(symbol || "").trim();
-    if (!s) return null;
-    return s.includes(":") ? s : `TADAWUL:${s}`;
-  }, [symbol]);
-
-  useEffect(() => {
-    if (!containerRef.current || !normalizedSymbol) return;
-    containerRef.current.innerHTML = "";
-
-    const script = document.createElement("script");
-    script.src = "https://s3.tradingview.com/external-embedding/embed-widget-symbol-info.js";
-    script.async = true;
-    script.type = "text/javascript";
-    script.innerHTML = JSON.stringify({
-      symbol: normalizedSymbol,
-      width: "100%",
-      locale: lang === "ar" ? "ar_AE" : "en",
-      colorTheme: theme === "dark" ? "dark" : "light",
-      isTransparent: true,
-    });
-    containerRef.current.appendChild(script);
-
-    return () => { if (containerRef.current) containerRef.current.innerHTML = ""; };
-  }, [normalizedSymbol, lang, theme]);
-
-  if (!normalizedSymbol) return null;
-
-  return <div ref={containerRef} className="tradingview-widget-container" style={{ width: "100%" }} />;
-};
-
-/* ──────────────────────────────────────────────────────────────────
-   TradingView Market Overview — shows multiple stocks with live prices
-   ────────────────────────────────────────────────────────────────── */
-
-const TradingViewMarketOverview = ({ symbols = [], height = 500 }) => {
-  const { c, t, lang, theme } = useApp();
-  const containerRef = useRef(null);
-
-  useEffect(() => {
-    if (!containerRef.current) return;
-    containerRef.current.innerHTML = "";
-
-    const normalize = (sym) => {
-      const s = String(sym || "").trim();
-      if (!s) return null;
-      return s.includes(":") ? s : `TADAWUL:${s}`;
-    };
-
-    // Build the symbols list — each item is [symbol, displayName]
-    const stockSymbols = symbols
-      .map((s) => {
-        const norm = normalize(s.sym);
-        if (!norm) return null;
-        return [norm, s.title || s.sym];
-      })
-      .filter(Boolean);
-
-    // Always include TASI index at the top
-    const finalSymbols = [
-      ["TADAWUL:TASI", "TASI"],
-      ...stockSymbols,
-    ];
-
-    const script = document.createElement("script");
-    script.src = "https://s3.tradingview.com/external-embedding/embed-widget-market-overview.js";
-    script.async = true;
-    script.type = "text/javascript";
-    script.innerHTML = JSON.stringify({
-      colorTheme: theme === "dark" ? "dark" : "light",
-      dateRange: "12M",
-      showChart: true,
-      locale: lang === "ar" ? "ar_AE" : "en",
-      largeChartUrl: "",
-      isTransparent: true,
-      showSymbolLogo: false,
-      showFloatingTooltip: false,
-      width: "100%",
-      height: height,
-      plotLineColorGrowing: "rgba(125, 180, 143, 1)",
-      plotLineColorFalling: "rgba(201, 122, 122, 1)",
-      gridLineColor: theme === "dark" ? "rgba(255, 255, 255, 0.06)" : "rgba(0, 0, 0, 0.06)",
-      scaleFontColor: theme === "dark" ? "rgba(216, 222, 231, 1)" : "rgba(61, 58, 51, 1)",
-      belowLineFillColorGrowing: "rgba(125, 180, 143, 0.12)",
-      belowLineFillColorFalling: "rgba(201, 122, 122, 0.12)",
-      belowLineFillColorGrowingBottom: "rgba(125, 180, 143, 0)",
-      belowLineFillColorFallingBottom: "rgba(201, 122, 122, 0)",
-      symbolActiveColor: "rgba(201, 168, 106, 0.18)",
-      tabs: [
-        {
-          title: lang === "ar" ? "تاسي" : "Tadawul",
-          symbols: finalSymbols.map(([s, n]) => ({ s, d: n })),
-          originalTitle: "Tadawul",
-        },
-      ],
-    });
-    containerRef.current.appendChild(script);
-
-    return () => { if (containerRef.current) containerRef.current.innerHTML = ""; };
-  }, [symbols, lang, theme, height]);
-
-  return (
-    <Card style={{ padding: 0, overflow: "hidden" }}>
-      <div style={{
-        padding: "20px 28px 16px",
-        borderBottom: `1px solid ${c.border}`,
-      }}>
-        <h3 style={{ fontFamily: font(lang), fontSize: 22, fontWeight: 500, color: c.textHi, margin: 0 }}>
-          {lang === "ar" ? "الأسعار المباشرة" : "Live Prices"}
-        </h3>
-      </div>
-      <div ref={containerRef} className="tradingview-widget-container"
-        style={{ minHeight: height, width: "100%" }} />
-    </Card>
+      <style>{`
+        @keyframes qararTickerScroll {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(${isAr ? "" : "-"}50%); }
+        }
+      `}</style>
+    </div>
   );
 };
 
@@ -1990,6 +1941,10 @@ const SeatsFullScreen = ({ onJoinWaitlist, waitlistCount }) => {
       setError(t.authErrorEmail);
       return;
     }
+    if (isSuspiciousEmail(email)) {
+      setError(t.authErrorSuspiciousEmail);
+      return;
+    }
     setSubmitting(true);
     try {
       const result = await db_addToWaitlist(email);
@@ -2137,7 +2092,7 @@ const SeatsFullScreen = ({ onJoinWaitlist, waitlistCount }) => {
    AUTH PAGE (Sign In / Sign Up)
    ────────────────────────────────────────────────────────────────── */
 
-const AuthPage = ({ users, setUsers, setCurrentUser, onSignupSuccess }) => {
+const AuthPage = ({ users, setUsers, setCurrentUser, onSignupSuccess, onBack }) => {
   const { c, t, lang, setLang, theme, setTheme } = useApp();
   const isAr = lang === "ar";
   const [mode, setMode] = useState("signin"); // signin | signup
@@ -2161,6 +2116,7 @@ const AuthPage = ({ users, setUsers, setCurrentUser, onSignupSuccess }) => {
         setError(t.authErrorRequired); return;
       }
       if (!isValidEmail(email)) { setError(t.authErrorEmail); return; }
+      if (isSuspiciousEmail(email)) { setError(t.authErrorSuspiciousEmail); return; }
       if (password.length < 6) { setError(t.authErrorPassword); return; }
 
       setSubmitting(true);
@@ -2221,8 +2177,23 @@ const AuthPage = ({ users, setUsers, setCurrentUser, onSignupSuccess }) => {
       fontFamily: font(lang),
       display: "flex", alignItems: "center", justifyContent: "center", padding: 24,
     }}>
+      {/* Top-left: Back to site (only when onBack is provided) */}
+      {onBack && (
+        <button onClick={onBack} style={{
+          position: "absolute", top: 20,
+          [isAr ? "right" : "left"]: 20,
+          padding: "8px 14px", background: "transparent",
+          border: `1px solid ${c.border}`, color: c.muted,
+          cursor: "pointer", borderRadius: 2,
+          fontFamily: font(lang), fontSize: 12,
+          display: "inline-flex", alignItems: "center", gap: 6,
+        }}>
+          {isAr ? "→" : "←"} {t.backToSite}
+        </button>
+      )}
+
       {/* Top-right toggles */}
-      <div style={{ position: "absolute", top: 20, right: 20, display: "flex", gap: 8 }}>
+      <div style={{ position: "absolute", top: 20, [isAr ? "left" : "right"]: 20, display: "flex", gap: 8 }}>
         <button onClick={() => setLang(lang === "en" ? "ar" : "en")} style={{
           padding: "8px 12px", background: "transparent",
           border: `1px solid ${c.border}`, color: c.text,
@@ -2392,7 +2363,7 @@ const AuthPage = ({ users, setUsers, setCurrentUser, onSignupSuccess }) => {
    USER-FACING PAGES
    ────────────────────────────────────────────────────────────────── */
 
-const HomePage = ({ go, stocks, market }) => {
+const HomePage = ({ go, stocks, market, previewMode = false, onSignIn }) => {
   const { c, t, lang } = useApp();
   const isAr = lang === "ar";
   const published = stocks.filter((s) => s.published);
@@ -2442,9 +2413,25 @@ const HomePage = ({ go, stocks, market }) => {
             </div>
             <div style={{ marginTop: 24, maxWidth: 520 }}>
               {(isAr ? market.quoteAr : market.quote) ? (
-                <p style={{ fontFamily: font(lang), fontSize: 24, fontStyle: "italic", color: c.text, lineHeight: 1.5, fontWeight: 400 }}>
-                  "{renderQuote()}"
-                </p>
+                previewMode ? (
+                  <>
+                    <PreviewSnippet text={isAr ? market.quoteAr : market.quote} maxChars={120} />
+                    <button onClick={onSignIn} style={{
+                      marginTop: 12, padding: "8px 16px",
+                      background: c.gold + "15", color: c.gold,
+                      border: `1px solid ${c.gold}60`,
+                      fontFamily: font(lang), fontSize: 13, fontWeight: 500,
+                      cursor: "pointer", borderRadius: 2,
+                      display: "inline-flex", alignItems: "center", gap: 8,
+                    }}>
+                      🔒 {t.lockedQuote}
+                    </button>
+                  </>
+                ) : (
+                  <p style={{ fontFamily: font(lang), fontSize: 24, fontStyle: "italic", color: c.text, lineHeight: 1.5, fontWeight: 400 }}>
+                    "{renderQuote()}"
+                  </p>
+                )
               ) : (
                 <p style={{ fontFamily: font(lang), fontSize: 18, fontStyle: "italic", color: c.muted, lineHeight: 1.5 }}>
                   {isAr ? "في انتظار توليفة المحلل…" : "Awaiting analyst synthesis…"}
@@ -2578,7 +2565,7 @@ const HomePage = ({ go, stocks, market }) => {
   );
 };
 
-const StockPage = ({ stocks, selectedStockId, setSelectedStockId }) => {
+const StockPage = ({ stocks, selectedStockId, setSelectedStockId, previewMode = false, onSignIn }) => {
   const { c, t, lang } = useApp();
   const isAr = lang === "ar";
   const published = stocks.filter((s) => s.published);
@@ -2667,62 +2654,124 @@ const StockPage = ({ stocks, selectedStockId, setSelectedStockId }) => {
         </div>
       </Card>
 
-      {/* TradingView Live Chart */}
-      <TradingViewChart symbol={stock.sym} height={520} />
+      {/* TradingView Live Chart — removed (TradingView doesn't support TADAWUL data in widgets) */}
 
       {/* Scenario (if provided) */}
       {scenario && (
-        <Card style={{
-          padding: 28,
-          background: `linear-gradient(135deg, ${c.surface} 0%, ${c.surface2} 100%)`,
-          borderLeft: !isAr ? `3px solid ${c.gold}` : "none",
-          borderRight: isAr ? `3px solid ${c.gold}` : "none",
-        }}>
-          <SectionLabel accent><Target size={11} /> {t.scenarioSection}</SectionLabel>
-          <p style={{
-            fontFamily: font(lang), fontSize: 22, fontWeight: 400, color: c.textHi,
-            lineHeight: 1.7, margin: "16px 0 0", fontStyle: "italic",
+        previewMode ? (
+          <Card style={{
+            padding: 28,
+            background: `linear-gradient(135deg, ${c.surface} 0%, ${c.surface2} 100%)`,
+            borderLeft: !isAr ? `3px solid ${c.gold}` : "none",
+            borderRight: isAr ? `3px solid ${c.gold}` : "none",
           }}>
-            "{scenario}"
-          </p>
-        </Card>
-      )}
-
-      {/* Chart Images Slider (if any image is set) */}
-      {stock.images && (stock.images.daily || stock.images.weekly || stock.images.monthly) && (
-        <ChartImageSlider images={stock.images} />
-      )}
-
-      {/* Detailed Analysis (if provided) */}
-      {analysis && (
-        <Card style={{ padding: 32 }}>
-          <div style={{ display: "flex", gap: 24, alignItems: "flex-start" }}>
-            <div style={{
-              flexShrink: 0, width: 48, height: 48, border: `1px solid ${c.gold}`,
-              borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
-            }}>
-              <Brain size={20} color={c.gold} strokeWidth={1.4} />
-            </div>
-            <div style={{ flex: 1 }}>
-              <SectionLabel accent>{t.analysisSection}</SectionLabel>
-              <p style={{
-                fontFamily: font(lang), fontSize: 17, fontWeight: 400, color: c.textHi,
-                lineHeight: 1.8, margin: "16px 0 0", whiteSpace: "pre-wrap",
+            <SectionLabel accent><Target size={11} /> {t.scenarioSection}</SectionLabel>
+            <div style={{ marginTop: 16 }}>
+              <PreviewSnippet text={scenario} maxChars={90} />
+              <button onClick={onSignIn} style={{
+                marginTop: 12, padding: "8px 16px",
+                background: c.gold + "15", color: c.gold,
+                border: `1px solid ${c.gold}60`,
+                fontFamily: font(lang), fontSize: 13, fontWeight: 500,
+                cursor: "pointer", borderRadius: 2,
+                display: "inline-flex", alignItems: "center", gap: 8,
               }}>
-                {analysis}
-              </p>
+                🔒 {t.lockedScenario}
+              </button>
             </div>
-          </div>
-        </Card>
+          </Card>
+        ) : (
+          <Card style={{
+            padding: 28,
+            background: `linear-gradient(135deg, ${c.surface} 0%, ${c.surface2} 100%)`,
+            borderLeft: !isAr ? `3px solid ${c.gold}` : "none",
+            borderRight: isAr ? `3px solid ${c.gold}` : "none",
+          }}>
+            <SectionLabel accent><Target size={11} /> {t.scenarioSection}</SectionLabel>
+            <p style={{
+              fontFamily: font(lang), fontSize: 22, fontWeight: 400, color: c.textHi,
+              lineHeight: 1.7, margin: "16px 0 0", fontStyle: "italic",
+            }}>
+              "{scenario}"
+            </p>
+          </Card>
+        )
       )}
 
-      {/* Live News from TradingView */}
-      <TradingViewNews symbol={stock.sym} />
+      {/* Chart Images Slider (locked for visitors) */}
+      {stock.images && (stock.images.daily || stock.images.weekly || stock.images.monthly) && (
+        previewMode ? (
+          <LockedSection
+            onSignIn={onSignIn}
+            title={isAr ? "صور التحليل الفنّي" : "Chart Analysis Images"}
+            hint={isAr
+              ? "ثلاثة فريمات (يومي، أسبوعي، شهري) مع مستويات التحليل المرسومة بدقة."
+              : "Three timeframes (daily, weekly, monthly) with hand-drawn analysis levels."}
+            minHeight={220}
+          />
+        ) : (
+          <ChartImageSlider images={stock.images} />
+        )
+      )}
+
+      {/* Detailed Analysis (locked for visitors) */}
+      {analysis && (
+        previewMode ? (
+          <Card style={{ padding: 32 }}>
+            <div style={{ display: "flex", gap: 24, alignItems: "flex-start" }}>
+              <div style={{
+                flexShrink: 0, width: 48, height: 48, border: `1px solid ${c.gold}`,
+                borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
+                <Brain size={20} color={c.gold} strokeWidth={1.4} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <SectionLabel accent>{t.analysisSection}</SectionLabel>
+                <div style={{ marginTop: 16 }}>
+                  <PreviewSnippet text={analysis} maxChars={180} />
+                  <button onClick={onSignIn} style={{
+                    marginTop: 14, padding: "10px 18px",
+                    background: c.gold, color: c.ink,
+                    border: `1px solid ${c.gold}`,
+                    fontFamily: font(lang), fontSize: 13, fontWeight: 600,
+                    cursor: "pointer", borderRadius: 2,
+                    display: "inline-flex", alignItems: "center", gap: 8,
+                  }}>
+                    🔒 {t.lockedAnalysis}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </Card>
+        ) : (
+          <Card style={{ padding: 32 }}>
+            <div style={{ display: "flex", gap: 24, alignItems: "flex-start" }}>
+              <div style={{
+                flexShrink: 0, width: 48, height: 48, border: `1px solid ${c.gold}`,
+                borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
+                <Brain size={20} color={c.gold} strokeWidth={1.4} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <SectionLabel accent>{t.analysisSection}</SectionLabel>
+                <p style={{
+                  fontFamily: font(lang), fontSize: 17, fontWeight: 400, color: c.textHi,
+                  lineHeight: 1.8, margin: "16px 0 0", whiteSpace: "pre-wrap",
+                }}>
+                  {analysis}
+                </p>
+              </div>
+            </div>
+          </Card>
+        )
+      )}
+
+      {/* News widget removed — TradingView doesn't index TADAWUL feed */}
     </div>
   );
 };
 
-const MarketPage = ({ market, stocks, goToStock }) => {
+const MarketPage = ({ market, stocks, goToStock, previewMode = false, onSignIn }) => {
   const { c, t, lang } = useApp();
   const isAr = lang === "ar";
 
@@ -2806,11 +2855,85 @@ const MarketPage = ({ market, stocks, goToStock }) => {
         </div>
       </Card>
 
-      {/* TradingView Market Overview — live prices for all listed stocks */}
-      <TradingViewMarketOverview
-        symbols={stocks.map((s) => ({ sym: s.sym, title: isAr ? s.nameAr : s.name }))}
-        height={460}
-      />
+      {/* Prices Card — Open/Close per stock */}
+      {stocks.some((s) => (s.open ?? 0) > 0 && (s.close ?? 0) > 0) && (
+        <Card style={{ padding: 0, overflow: "hidden" }}>
+          <div style={{
+            padding: "24px 28px 20px",
+            borderBottom: `1px solid ${c.border}`,
+            display: "flex", justifyContent: "space-between", alignItems: "baseline",
+            flexWrap: "wrap", gap: 8,
+          }}>
+            <h3 style={{ fontFamily: font(lang), fontSize: 24, color: c.textHi, margin: 0, fontWeight: 500 }}>
+              💰 {t.pricesSection}
+            </h3>
+            <SectionLabel>{stocks.filter((s) => (s.open ?? 0) > 0).length} {isAr ? "سهم" : "stocks"}</SectionLabel>
+          </div>
+
+          {/* Header */}
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "70px 1.6fr 1fr 1fr 110px",
+            padding: "12px 28px", background: c.surface2,
+            fontFamily: fontMono, fontSize: 10, color: c.muted,
+            letterSpacing: "0.12em", textTransform: "uppercase",
+            borderBottom: `1px solid ${c.border}`, gap: 16, alignItems: "center",
+          }}>
+            <div>{t.colTicker}</div>
+            <div>{t.colCompany}</div>
+            <div style={{ textAlign: isAr ? "left" : "right" }}>{t.colOpen}</div>
+            <div style={{ textAlign: isAr ? "left" : "right" }}>{t.colClose}</div>
+            <div style={{ textAlign: isAr ? "left" : "right" }}>{t.colChange}</div>
+          </div>
+
+          {/* Rows */}
+          {stocks
+            .filter((s) => (s.open ?? 0) > 0 && (s.close ?? 0) > 0)
+            .map((s, i, arr) => {
+              const change = s.close - s.open;
+              const changePct = s.open > 0 ? (change / s.open) * 100 : 0;
+              const up = change >= 0;
+              return (
+                <div
+                  key={s.id}
+                  onClick={() => goToStock && s.published && goToStock(s.id)}
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "70px 1.6fr 1fr 1fr 110px",
+                    padding: "16px 28px",
+                    borderBottom: i === arr.length - 1 ? "none" : `1px solid ${c.border}`,
+                    alignItems: "center", gap: 16,
+                    cursor: s.published ? "pointer" : "default",
+                    opacity: s.published ? 1 : 0.6,
+                    transition: "background 0.15s ease",
+                  }}
+                  onMouseEnter={(e) => { if (s.published) e.currentTarget.style.background = c.surface2; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+                >
+                  <div style={{ fontFamily: fontMono, fontSize: 13, color: c.muted, letterSpacing: "0.05em" }}>
+                    {s.sym}
+                  </div>
+                  <div style={{ fontFamily: font(lang), fontSize: 14, color: c.textHi, fontWeight: 500 }}>
+                    {isAr ? s.nameAr : s.name}
+                  </div>
+                  <div style={{ textAlign: isAr ? "left" : "right", fontFamily: fontMono, fontSize: 14, color: c.text }}>
+                    {fmt(s.open, 2, lang)}
+                  </div>
+                  <div style={{ textAlign: isAr ? "left" : "right", fontFamily: fontMono, fontSize: 14, color: c.textHi, fontWeight: 600 }}>
+                    {fmt(s.close, 2, lang)}
+                  </div>
+                  <div style={{
+                    textAlign: isAr ? "left" : "right",
+                    fontFamily: fontMono, fontSize: 13,
+                    color: up ? c.green : c.red, fontWeight: 600,
+                  }}>
+                    {up ? "▲" : "▼"} {fmt(Math.abs(changePct), 2, lang)}%
+                  </div>
+                </div>
+              );
+            })}
+        </Card>
+      )}
 
       {/* Watchlist Table — All 10 stocks */}
       <Card style={{ padding: 0, overflow: "hidden" }}>
@@ -2897,13 +3020,17 @@ const MarketPage = ({ market, stocks, goToStock }) => {
                 </div>
               </div>
 
-              {/* Scenario */}
+              {/* Scenario (locked snippet for visitors) */}
               <div style={{
                 fontFamily: font(lang), fontSize: 14, color: scenario ? c.text : c.muted,
                 fontStyle: scenario ? "italic" : "normal",
                 lineHeight: 1.5,
               }}>
-                {scenario || t.noScenario}
+                {scenario
+                  ? (previewMode
+                      ? (scenario.length > 50 ? scenario.slice(0, 50) + "… 🔒" : scenario + " 🔒")
+                      : scenario)
+                  : t.noScenario}
               </div>
 
               {/* Confidence */}
@@ -3614,7 +3741,7 @@ const JournalPage = ({ currentUser }) => {
   );
 };
 
-const WeeklyPage = ({ weekly }) => {
+const WeeklyPage = ({ weekly, previewMode = false, onSignIn }) => {
   const { c, t, lang } = useApp();
   const isAr = lang === "ar";
   const videoId = getYouTubeId(weekly.url);
@@ -3630,35 +3757,46 @@ const WeeklyPage = ({ weekly }) => {
         </p>
       </Card>
 
-      <Card style={{ padding: 0, overflow: "hidden" }}>
-        {videoId ? (
-          <div style={{ aspectRatio: "16/9", width: "100%" }}>
-            <iframe width="100%" height="100%"
-              src={`https://www.youtube.com/embed/${videoId}`}
-              title="YouTube video player"
-              frameBorder="0" allowFullScreen
-              style={{ border: 0, display: "block" }} />
-          </div>
-        ) : (
-          <div style={{
-            aspectRatio: "16/9", background: `linear-gradient(135deg, ${c.surface2} 0%, ${c.ink} 100%)`,
-            display: "flex", alignItems: "center", justifyContent: "center",
-          }}>
-            <div style={{ textAlign: "center" }}>
-              <div style={{
-                width: 88, height: 88, borderRadius: "50%", border: `1.5px solid ${c.gold}`,
-                display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px",
-                background: `${c.gold}15`,
-              }}>
-                <PlayCircle size={36} color={c.gold} strokeWidth={1} />
-              </div>
-              <div style={{ fontFamily: font(lang), fontSize: 28, color: c.textHi, fontStyle: "italic" }}>
-                {isAr ? "لم يُرفع الفيديو بعد" : "Video not yet uploaded"}
+      {previewMode ? (
+        <LockedSection
+          onSignIn={onSignIn}
+          title={t.lockedVideo}
+          hint={isAr
+            ? "فيديو أسبوعي يلخّص حركة السوق، الأسهم القيادية، والسيناريوهات للأسبوع القادم."
+            : "Weekly video synthesis covering market action, leading stocks, and next week's scenarios."}
+          minHeight={320}
+        />
+      ) : (
+        <Card style={{ padding: 0, overflow: "hidden" }}>
+          {videoId ? (
+            <div style={{ aspectRatio: "16/9", width: "100%" }}>
+              <iframe width="100%" height="100%"
+                src={`https://www.youtube.com/embed/${videoId}`}
+                title="YouTube video player"
+                frameBorder="0" allowFullScreen
+                style={{ border: 0, display: "block" }} />
+            </div>
+          ) : (
+            <div style={{
+              aspectRatio: "16/9", background: `linear-gradient(135deg, ${c.surface2} 0%, ${c.ink} 100%)`,
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}>
+              <div style={{ textAlign: "center" }}>
+                <div style={{
+                  width: 88, height: 88, borderRadius: "50%", border: `1.5px solid ${c.gold}`,
+                  display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px",
+                  background: `${c.gold}15`,
+                }}>
+                  <PlayCircle size={36} color={c.gold} strokeWidth={1} />
+                </div>
+                <div style={{ fontFamily: font(lang), fontSize: 28, color: c.textHi, fontStyle: "italic" }}>
+                  {isAr ? "لم يُرفع الفيديو بعد" : "Video not yet uploaded"}
+                </div>
               </div>
             </div>
-          </div>
-        )}
-      </Card>
+          )}
+        </Card>
+      )}
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
         <Card style={{ padding: 28 }}>
@@ -3936,6 +4074,7 @@ const AdminStocks = ({ stocks, setStocks }) => {
     scenario: "", scenarioAr: "",
     analysis: "", analysisAr: "",
     confidence: "medium",
+    open: 0, close: 0,  // Daily open/close prices (manual)
     published: false,
     images: { daily: "", weekly: "", monthly: "" },
     // Legacy fields kept null for backward compatibility with DB schema
@@ -4014,6 +4153,48 @@ const AdminStocks = ({ stocks, setStocks }) => {
             <Input label={t.formSymbol} value={editing.sym} onChange={(v) => setEditing({ ...editing, sym: v })} placeholder="2222" />
             <Input label={isAr ? "القطاع (EN)" : "Sector (EN)"} value={editing.sector} onChange={(v) => setEditing({ ...editing, sector: v })} placeholder="Energy" />
             <Input label={isAr ? "القطاع (AR)" : "Sector (AR)"} value={editing.sectorAr} onChange={(v) => setEditing({ ...editing, sectorAr: v })} placeholder="الطاقة" />
+          </div>
+
+          {/* Prices section — Open/Close (manual, daily) */}
+          <div style={{ marginTop: 24, paddingTop: 24, borderTop: `1px solid ${c.border}` }}>
+            <SectionLabel accent>💰 {t.pricesSection}</SectionLabel>
+            <div style={{
+              fontFamily: font(lang), fontSize: 12, color: c.muted,
+              marginTop: 6, marginBottom: 14, fontStyle: "italic",
+            }}>
+              {t.pricesHint}
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+              <Input
+                label={t.openPrice + " (SAR)"}
+                value={editing.open || 0}
+                onChange={(v) => setEditing({ ...editing, open: parseFloat(v) || 0 })}
+                type="number"
+                placeholder="27.20"
+              />
+              <Input
+                label={t.closePrice + " (SAR)"}
+                value={editing.close || 0}
+                onChange={(v) => setEditing({ ...editing, close: parseFloat(v) || 0 })}
+                type="number"
+                placeholder="28.84"
+              />
+            </div>
+            {editing.open > 0 && editing.close > 0 && (
+              <div style={{
+                marginTop: 10, padding: "8px 12px",
+                background: c.surface2, borderRadius: 2,
+                fontFamily: fontMono, fontSize: 12,
+                display: "flex", gap: 16, flexWrap: "wrap",
+              }}>
+                <span style={{ color: c.muted }}>{t.colChange}:</span>
+                <span style={{ color: editing.close >= editing.open ? c.green : c.red, fontWeight: 600 }}>
+                  {editing.close >= editing.open ? "▲" : "▼"}{" "}
+                  {fmt(editing.close - editing.open, 2, lang)}{" "}
+                  ({fmt(((editing.close - editing.open) / editing.open) * 100, 2, lang)}%)
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Outlook section */}
@@ -4737,14 +4918,27 @@ export default function Qarar() {
     );
   }
 
-  // ── User mode: launch system ──
-  const seatsAreFull = users.length >= MAX_SEATS;
-  const launchReady = siteForceOpen || isLaunchTimeReached();
+  // ── User mode: open-access preview model ──
+  // Visitors browse the full site; sensitive content is locked.
+  // Only sign-up/sign-in (and a dedicated waitlist screen if seats are full) gate access.
 
-  // CASE 1: Visitor not signed in
-  if (!currentUser) {
-    // If seats full, show waitlist screen
-    if (seatsAreFull) {
+  const seatsAreFull = users.length >= MAX_SEATS;
+  const previewMode = !currentUser; // visitor viewing the site without signing in
+
+  // Show celebratory congrats screen right after signup
+  if (currentUser && justSignedUp) {
+    return (
+      <AppContext.Provider value={ctx}>
+        <GlobalStyles c={c} />
+        <CongratsScreen user={currentUser} onContinue={() => setJustSignedUp(false)} />
+      </AppContext.Provider>
+    );
+  }
+
+  // Dedicated auth pages (only when user explicitly clicks "Sign in"/"Sign up")
+  if (page === "auth") {
+    // If seats are full and visitor isn't signed in, redirect to waitlist screen
+    if (!currentUser && seatsAreFull) {
       return (
         <AppContext.Provider value={ctx}>
           <GlobalStyles c={c} />
@@ -4755,50 +4949,33 @@ export default function Qarar() {
         </AppContext.Provider>
       );
     }
-    // Otherwise show auth page (with seat counter inside)
-    return (
-      <AppContext.Provider value={ctx}>
-        <GlobalStyles c={c} />
-        <AuthPage
-          users={users}
-          setUsers={setUsers}
-          setCurrentUser={setCurrentUser}
-          onSignupSuccess={() => setJustSignedUp(true)}
-        />
-      </AppContext.Provider>
-    );
+    if (!currentUser) {
+      return (
+        <AppContext.Provider value={ctx}>
+          <GlobalStyles c={c} />
+          <AuthPage
+            users={users}
+            setUsers={setUsers}
+            setCurrentUser={(u) => { setCurrentUser(u); setPage("home"); }}
+            onSignupSuccess={() => setJustSignedUp(true)}
+            onBack={() => setPage("home")}
+          />
+        </AppContext.Provider>
+      );
+    }
+    // already signed in → fall through to main
   }
 
-  // CASE 2: User just signed up — show congrats briefly
-  if (justSignedUp) {
-    return (
-      <AppContext.Provider value={ctx}>
-        <GlobalStyles c={c} />
-        <CongratsScreen user={currentUser} onContinue={() => setJustSignedUp(false)} />
-      </AppContext.Provider>
-    );
-  }
-
-  // CASE 3: User logged in but launch hasn't happened yet
-  if (!launchReady) {
-    return (
-      <AppContext.Provider value={ctx}>
-        <GlobalStyles c={c} />
-        <CountdownScreen user={currentUser} onLogout={userLogout} />
-      </AppContext.Provider>
-    );
-  }
-
-  // CASE 4: User logged in AND launch ready — full site
+  // ── Main site: full preview for everyone, locked content for visitors ──
   const renderPage = () => {
     switch (page) {
-      case "home": return <HomePage go={goto} stocks={stocks} market={market} />;
-      case "stock": return <StockPage stocks={stocks} selectedStockId={selectedStockId} setSelectedStockId={setSelectedStockId} />;
-      case "market": return <MarketPage market={market} stocks={stocks} goToStock={(id) => goto("stock", id)} />;
-      case "portfolio": return <PortfolioPage currentUser={currentUser} />;
-      case "journal": return <JournalPage currentUser={currentUser} />;
-      case "weekly": return <WeeklyPage weekly={weekly} />;
-      default: return <HomePage go={goto} stocks={stocks} market={market} />;
+      case "home": return <HomePage go={goto} stocks={stocks} market={market} previewMode={previewMode} onSignIn={() => setPage("auth")} />;
+      case "stock": return <StockPage stocks={stocks} selectedStockId={selectedStockId} setSelectedStockId={setSelectedStockId} previewMode={previewMode} onSignIn={() => setPage("auth")} />;
+      case "market": return <MarketPage market={market} stocks={stocks} goToStock={(id) => goto("stock", id)} previewMode={previewMode} onSignIn={() => setPage("auth")} />;
+      case "portfolio": return previewMode ? <LockedPage onSignIn={() => setPage("auth")} title={t.nav.portfolio} /> : <PortfolioPage currentUser={currentUser} />;
+      case "journal": return previewMode ? <LockedPage onSignIn={() => setPage("auth")} title={t.nav.journal} /> : <JournalPage currentUser={currentUser} />;
+      case "weekly": return <WeeklyPage weekly={weekly} previewMode={previewMode} onSignIn={() => setPage("auth")} />;
+      default: return <HomePage go={goto} stocks={stocks} market={market} previewMode={previewMode} onSignIn={() => setPage("auth")} />;
     }
   };
 
@@ -4882,40 +5059,47 @@ export default function Qarar() {
                 <Settings size={14} />
               </button>
 
-              {/* User badge + sign out */}
-              <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 12px", border: `1px solid ${c.border}`, borderRadius: 2 }}>
-                <div style={{
-                  width: 28, height: 28, borderRadius: "50%", background: c.gold + "20",
-                  border: `1px solid ${c.gold}`, display: "flex",
-                  alignItems: "center", justifyContent: "center",
-                  fontFamily: font(lang), fontSize: 13, color: c.gold, fontWeight: 600,
-                }}>
-                  {(currentUser.name || currentUser.username || "U")[0].toUpperCase()}
+              {/* User badge + sign out OR Sign in button for visitors */}
+              {currentUser ? (
+                <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 12px", border: `1px solid ${c.border}`, borderRadius: 2 }}>
+                  <div style={{
+                    width: 28, height: 28, borderRadius: "50%", background: c.gold + "20",
+                    border: `1px solid ${c.gold}`, display: "flex",
+                    alignItems: "center", justifyContent: "center",
+                    fontFamily: font(lang), fontSize: 13, color: c.gold, fontWeight: 600,
+                  }}>
+                    {(currentUser.name || currentUser.username || "U")[0].toUpperCase()}
+                  </div>
+                  <div style={{ fontFamily: font(lang), fontSize: 14, color: c.textHi }}>
+                    {currentUser.name || currentUser.username}
+                  </div>
+                  <button onClick={userLogout} title={t.signOut} style={{
+                    background: "transparent", border: "none", color: c.muted,
+                    cursor: "pointer", padding: 4, marginLeft: 4,
+                    display: "flex", alignItems: "center",
+                  }}>
+                    <LogOut size={14} />
+                  </button>
                 </div>
-                <div style={{ fontFamily: font(lang), fontSize: 14, color: c.textHi }}>
-                  {currentUser.name || currentUser.username}
-                </div>
-                <button onClick={userLogout} title={t.signOut} style={{
-                  background: "transparent", border: "none", color: c.muted,
-                  cursor: "pointer", padding: 4, marginLeft: 4,
-                  display: "flex", alignItems: "center",
+              ) : (
+                <button onClick={() => setPage("auth")} style={{
+                  padding: "9px 18px",
+                  background: c.gold, color: c.ink,
+                  border: `1px solid ${c.gold}`,
+                  fontFamily: font(lang), fontSize: 13, fontWeight: 600,
+                  cursor: "pointer", borderRadius: 2,
+                  letterSpacing: "0.02em",
+                  display: "inline-flex", alignItems: "center", gap: 8,
                 }}>
-                  <LogOut size={14} />
+                  <User size={13} /> {t.signInNav}
                 </button>
-              </div>
+              )}
             </div>
           </div>
         </header>
 
-        {/* TradingView Ticker Tape — live prices strip */}
-        <div style={{ borderBottom: `1px solid ${c.border}`, background: c.surface }}>
-          <TradingViewTicker
-            symbols={(stocks || [])
-              .filter((s) => s.published)
-              .slice(0, 10)
-              .map((s) => ({ sym: s.sym, title: isAr ? s.nameAr : s.name }))}
-          />
-        </div>
+        {/* Price Ticker — manual prices from Supabase (open/close) */}
+        <PriceTicker stocks={(stocks || []).filter((s) => s.published)} />
 
         <main style={{ maxWidth: 1400, margin: "0 auto", padding: "32px" }}>
           {renderPage()}
