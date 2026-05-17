@@ -1195,11 +1195,11 @@ const TradingViewTicker = ({ symbols = [] }) => {
 
     const finalSymbols = userSymbols.length > 0
       ? [
-          { proName: "TVC:TASI", title: "TASI" },
+          { proName: "TADAWUL:TASI", title: "TASI" },
           ...userSymbols,
         ]
       : [
-          { proName: "TVC:TASI", title: "TASI" },
+          { proName: "TADAWUL:TASI", title: "TASI" },
           { proName: "TADAWUL:2222", title: "Aramco" },
           { proName: "TADAWUL:1180", title: "Al Rajhi" },
           { proName: "TADAWUL:2010", title: "SABIC" },
@@ -1368,7 +1368,7 @@ const TradingViewMarketOverview = ({ symbols = [], height = 500 }) => {
 
     // Always include TASI index at the top
     const finalSymbols = [
-      ["TVC:TASI", "TASI"],
+      ["TADAWUL:TASI", "TASI"],
       ...stockSymbols,
     ];
 
