@@ -10,6 +10,7 @@ import {
 // Supabase database helpers
 import {
   db_listUsers, db_countUsers, db_findUserByEmail, db_findUserByUsername, db_createUser,
+  db_resetUserPassword,
   db_listWaitlist, db_addToWaitlist, db_removeFromWaitlist,
   db_listStocks, db_saveStock, db_deleteStock,
   db_getMarket, db_saveMarket,
@@ -115,6 +116,10 @@ const STRINGS = {
     authErrorPassword: "Password must be at least 6 characters",
     authErrorExists: "This email or username already exists",
     authErrorInvalid: "Invalid email or password",
+    forgotPasswordTitle: "Forgot your password?",
+    forgotPasswordBody: "No worries. Email us with your registered email and we'll reset your password within 24 hours.",
+    forgotPasswordCta: "Contact Support",
+    supportEmail: "help@tasiqarar.com",
     welcomeBack: "Welcome back",
     // Launch / Countdown (NEW)
     seatsLeft: "seats remaining",
@@ -371,6 +376,10 @@ const STRINGS = {
     authErrorPassword: "كلمة المرور يجب أن تكون ٦ أحرف على الأقل",
     authErrorExists: "البريد الإلكتروني أو اسم المستخدم موجود مسبقاً",
     authErrorInvalid: "البريد أو كلمة المرور غير صحيحة",
+    forgotPasswordTitle: "نسيت كلمة المرور؟",
+    forgotPasswordBody: "لا تقلق. أرسل لنا إيميل من بريدك المسجّل وسنُعيد تعيين كلمة المرور خلال ٢٤ ساعة.",
+    forgotPasswordCta: "تواصل مع الدعم",
+    supportEmail: "help@tasiqarar.com",
     welcomeBack: "أهلاً بعودتك",
     // Launch / Countdown (NEW)
     seatsLeft: "مقعد متبقّي",
@@ -1171,18 +1180,39 @@ const TradingViewTicker = ({ symbols = [] }) => {
     if (!containerRef.current) return;
     containerRef.current.innerHTML = "";
 
+    // Normalize symbol — handle if user already added TADAWUL: prefix
+    const normalize = (sym) => {
+      const s = String(sym || "").trim();
+      if (!s) return null;
+      if (s.includes(":")) return s; // already has exchange prefix
+      return `TADAWUL:${s}`;
+    };
+
+    // Build symbols list — start with TASI index, then user's stocks
+    const userSymbols = symbols
+      .map((s) => ({ proName: normalize(s.sym), title: s.title || s.sym }))
+      .filter((s) => s.proName);
+
+    const finalSymbols = userSymbols.length > 0
+      ? [
+          { proName: "TVC:TASI", title: "TASI" },
+          ...userSymbols,
+        ]
+      : [
+          { proName: "TVC:TASI", title: "TASI" },
+          { proName: "TADAWUL:2222", title: "Aramco" },
+          { proName: "TADAWUL:1180", title: "Al Rajhi" },
+          { proName: "TADAWUL:2010", title: "SABIC" },
+          { proName: "TADAWUL:1211", title: "Maaden" },
+          { proName: "TADAWUL:1120", title: "Al Rajhi Bank" },
+        ];
+
     const script = document.createElement("script");
     script.src = "https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js";
     script.async = true;
     script.type = "text/javascript";
     script.innerHTML = JSON.stringify({
-      symbols: symbols.length > 0
-        ? symbols.map((s) => ({ proName: `TADAWUL:${s.sym}`, title: s.title || s.sym }))
-        : [
-            { proName: "TADAWUL:2222", title: "Aramco" },
-            { proName: "TADAWUL:1180", title: "Al Rajhi" },
-            { proName: "TADAWUL:2010", title: "SABIC" },
-          ],
+      symbols: finalSymbols,
       showSymbolLogo: false,
       isTransparent: true,
       displayMode: "adaptive",
@@ -1208,8 +1238,15 @@ const TradingViewChart = ({ symbol, height = 500 }) => {
   const { c, t, lang, theme } = useApp();
   const containerRef = useRef(null);
 
+  // Normalize: if user typed "TADAWUL:2222" or just "2222", produce the right format
+  const normalizedSymbol = useMemo(() => {
+    const s = String(symbol || "").trim();
+    if (!s) return null;
+    return s.includes(":") ? s : `TADAWUL:${s}`;
+  }, [symbol]);
+
   useEffect(() => {
-    if (!containerRef.current || !symbol) return;
+    if (!containerRef.current || !normalizedSymbol) return;
     containerRef.current.innerHTML = "";
 
     const script = document.createElement("script");
@@ -1218,7 +1255,7 @@ const TradingViewChart = ({ symbol, height = 500 }) => {
     script.type = "text/javascript";
     script.innerHTML = JSON.stringify({
       autosize: true,
-      symbol: `TADAWUL:${symbol}`,
+      symbol: normalizedSymbol,
       interval: "D",
       timezone: "Asia/Riyadh",
       theme: theme === "dark" ? "dark" : "light",
@@ -1240,9 +1277,9 @@ const TradingViewChart = ({ symbol, height = 500 }) => {
     containerRef.current.appendChild(script);
 
     return () => { if (containerRef.current) containerRef.current.innerHTML = ""; };
-  }, [symbol, lang, theme]);
+  }, [normalizedSymbol, lang, theme]);
 
-  if (!symbol) return null;
+  if (!normalizedSymbol) return null;
 
   return (
     <Card style={{ padding: 0, overflow: "hidden" }}>
@@ -1255,7 +1292,7 @@ const TradingViewChart = ({ symbol, height = 500 }) => {
         <h3 style={{ fontFamily: font(lang), fontSize: 22, fontWeight: 500, color: c.textHi, margin: 0 }}>
           {t.liveChart}
         </h3>
-        <SectionLabel>TADAWUL · {symbol}</SectionLabel>
+        <SectionLabel>{normalizedSymbol}</SectionLabel>
       </div>
       <div ref={containerRef} className="tradingview-widget-container"
         style={{ height, width: "100%" }} />
@@ -1271,8 +1308,14 @@ const TradingViewSymbolInfo = ({ symbol }) => {
   const { lang, theme } = useApp();
   const containerRef = useRef(null);
 
+  const normalizedSymbol = useMemo(() => {
+    const s = String(symbol || "").trim();
+    if (!s) return null;
+    return s.includes(":") ? s : `TADAWUL:${s}`;
+  }, [symbol]);
+
   useEffect(() => {
-    if (!containerRef.current || !symbol) return;
+    if (!containerRef.current || !normalizedSymbol) return;
     containerRef.current.innerHTML = "";
 
     const script = document.createElement("script");
@@ -1280,7 +1323,7 @@ const TradingViewSymbolInfo = ({ symbol }) => {
     script.async = true;
     script.type = "text/javascript";
     script.innerHTML = JSON.stringify({
-      symbol: `TADAWUL:${symbol}`,
+      symbol: normalizedSymbol,
       width: "100%",
       locale: lang === "ar" ? "ar_AE" : "en",
       colorTheme: theme === "dark" ? "dark" : "light",
@@ -1289,11 +1332,97 @@ const TradingViewSymbolInfo = ({ symbol }) => {
     containerRef.current.appendChild(script);
 
     return () => { if (containerRef.current) containerRef.current.innerHTML = ""; };
-  }, [symbol, lang, theme]);
+  }, [normalizedSymbol, lang, theme]);
 
-  if (!symbol) return null;
+  if (!normalizedSymbol) return null;
 
   return <div ref={containerRef} className="tradingview-widget-container" style={{ width: "100%" }} />;
+};
+
+/* ──────────────────────────────────────────────────────────────────
+   TradingView Market Overview — shows multiple stocks with live prices
+   ────────────────────────────────────────────────────────────────── */
+
+const TradingViewMarketOverview = ({ symbols = [], height = 500 }) => {
+  const { c, t, lang, theme } = useApp();
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    containerRef.current.innerHTML = "";
+
+    const normalize = (sym) => {
+      const s = String(sym || "").trim();
+      if (!s) return null;
+      return s.includes(":") ? s : `TADAWUL:${s}`;
+    };
+
+    // Build the symbols list — each item is [symbol, displayName]
+    const stockSymbols = symbols
+      .map((s) => {
+        const norm = normalize(s.sym);
+        if (!norm) return null;
+        return [norm, s.title || s.sym];
+      })
+      .filter(Boolean);
+
+    // Always include TASI index at the top
+    const finalSymbols = [
+      ["TVC:TASI", "TASI"],
+      ...stockSymbols,
+    ];
+
+    const script = document.createElement("script");
+    script.src = "https://s3.tradingview.com/external-embedding/embed-widget-market-overview.js";
+    script.async = true;
+    script.type = "text/javascript";
+    script.innerHTML = JSON.stringify({
+      colorTheme: theme === "dark" ? "dark" : "light",
+      dateRange: "12M",
+      showChart: true,
+      locale: lang === "ar" ? "ar_AE" : "en",
+      largeChartUrl: "",
+      isTransparent: true,
+      showSymbolLogo: false,
+      showFloatingTooltip: false,
+      width: "100%",
+      height: height,
+      plotLineColorGrowing: "rgba(125, 180, 143, 1)",
+      plotLineColorFalling: "rgba(201, 122, 122, 1)",
+      gridLineColor: theme === "dark" ? "rgba(255, 255, 255, 0.06)" : "rgba(0, 0, 0, 0.06)",
+      scaleFontColor: theme === "dark" ? "rgba(216, 222, 231, 1)" : "rgba(61, 58, 51, 1)",
+      belowLineFillColorGrowing: "rgba(125, 180, 143, 0.12)",
+      belowLineFillColorFalling: "rgba(201, 122, 122, 0.12)",
+      belowLineFillColorGrowingBottom: "rgba(125, 180, 143, 0)",
+      belowLineFillColorFallingBottom: "rgba(201, 122, 122, 0)",
+      symbolActiveColor: "rgba(201, 168, 106, 0.18)",
+      tabs: [
+        {
+          title: lang === "ar" ? "تاسي" : "Tadawul",
+          symbols: finalSymbols.map(([s, n]) => ({ s, d: n })),
+          originalTitle: "Tadawul",
+        },
+      ],
+    });
+    containerRef.current.appendChild(script);
+
+    return () => { if (containerRef.current) containerRef.current.innerHTML = ""; };
+  }, [symbols, lang, theme, height]);
+
+  return (
+    <Card style={{ padding: 0, overflow: "hidden" }}>
+      <div style={{
+        padding: "20px 28px 16px",
+        borderBottom: `1px solid ${c.border}`,
+      }}>
+        <h3 style={{ fontFamily: font(lang), fontSize: 22, fontWeight: 500, color: c.textHi, margin: 0 }}>
+          {lang === "ar" ? "الأسعار المباشرة" : "Live Prices"}
+        </h3>
+      </div>
+      <div ref={containerRef} className="tradingview-widget-container"
+        style={{ minHeight: height, width: "100%" }} />
+    </Card>
+  );
 };
 
 
@@ -2017,6 +2146,7 @@ const AuthPage = ({ users, setUsers, setCurrentUser, onSignupSuccess }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [failedAttempts, setFailedAttempts] = useState(0); // Track failed sign-in attempts
 
   const seatsFilled = users.length;
   const [submitting, setSubmitting] = useState(false);
@@ -2067,13 +2197,18 @@ const AuthPage = ({ users, setUsers, setCurrentUser, onSignupSuccess }) => {
       try {
         const user = await db_findUserByEmail(email);
         if (!user || user.passwordHash !== simpleHash(password)) {
-          setError(t.authErrorInvalid); setSubmitting(false); return;
+          setError(t.authErrorInvalid);
+          setFailedAttempts((n) => n + 1);
+          setSubmitting(false);
+          return;
         }
         ls.set("qarar:session", { userId: user.id, time: Date.now() });
+        setFailedAttempts(0);
         setCurrentUser(user);
       } catch (err) {
         console.error(err);
         setError(t.authErrorInvalid);
+        setFailedAttempts((n) => n + 1);
       } finally {
         setSubmitting(false);
       }
@@ -2163,9 +2298,66 @@ const AuthPage = ({ users, setUsers, setCurrentUser, onSignupSuccess }) => {
               </div>
             )}
 
+            {/* Password recovery help — shown after 2+ failed sign-in attempts */}
+            {mode === "signin" && failedAttempts >= 2 && (
+              <div style={{
+                padding: "16px 18px",
+                background: c.gold + "10",
+                border: `1px solid ${c.gold}40`,
+                borderRadius: 4,
+                marginBottom: 16,
+              }}>
+                <div style={{
+                  fontFamily: font(lang), fontSize: 14, color: c.gold,
+                  fontWeight: 500, marginBottom: 8,
+                }}>
+                  🔑 {t.forgotPasswordTitle}
+                </div>
+                <div style={{
+                  fontFamily: font(lang), fontSize: 13, color: c.text,
+                  lineHeight: 1.7, marginBottom: 12,
+                }}>
+                  {t.forgotPasswordBody}
+                </div>
+                <a
+                  href={`mailto:${t.supportEmail}?subject=${encodeURIComponent(isAr ? "استعادة كلمة المرور" : "Password Reset Request")}&body=${encodeURIComponent((isAr ? "بريدي المسجّل: " : "My registered email: ") + email)}`}
+                  style={{
+                    display: "inline-flex", alignItems: "center", gap: 8,
+                    padding: "8px 14px",
+                    background: c.gold + "20",
+                    color: c.gold,
+                    border: `1px solid ${c.gold}60`,
+                    borderRadius: 3,
+                    fontFamily: font(lang), fontSize: 13, fontWeight: 500,
+                    textDecoration: "none",
+                  }}
+                >
+                  📧 {t.supportEmail}
+                </a>
+              </div>
+            )}
+
             <Button type="submit" fullWidth onClick={submit} icon={mode === "signin" ? Shield : User} style={{ marginTop: 8 }}>
               {mode === "signin" ? t.signInCta : (mode === "signup" ? t.reserveMySeat : t.createAccount)}
             </Button>
+
+            {/* Always-visible "Forgot password?" link in sign-in mode */}
+            {mode === "signin" && failedAttempts < 2 && (
+              <div style={{
+                marginTop: 14, textAlign: "center",
+                fontFamily: font(lang), fontSize: 13,
+              }}>
+                <a
+                  href={`mailto:${t.supportEmail}?subject=${encodeURIComponent(isAr ? "استعادة كلمة المرور" : "Password Reset Request")}`}
+                  style={{
+                    color: c.muted, textDecoration: "underline",
+                    fontFamily: font(lang),
+                  }}
+                >
+                  {t.forgotPasswordTitle}
+                </a>
+              </div>
+            )}
           </form>
 
           <div style={{
@@ -2613,6 +2805,12 @@ const MarketPage = ({ market, stocks, goToStock }) => {
           </div>
         </div>
       </Card>
+
+      {/* TradingView Market Overview — live prices for all listed stocks */}
+      <TradingViewMarketOverview
+        symbols={stocks.map((s) => ({ sym: s.sym, title: isAr ? s.nameAr : s.name }))}
+        height={460}
+      />
 
       {/* Watchlist Table — All 10 stocks */}
       <Card style={{ padding: 0, overflow: "hidden" }}>
@@ -4148,7 +4346,7 @@ const AdminUsers = ({ users, waitlist, setWaitlist }) => {
           ) : (
             <>
               <div style={{
-                display: "grid", gridTemplateColumns: "80px 1.5fr 1.2fr 2fr 1fr",
+                display: "grid", gridTemplateColumns: "80px 1.5fr 1.2fr 2fr 1fr 110px",
                 padding: "16px 24px", borderBottom: `1px solid ${c.border}`,
                 fontFamily: fontMono, fontSize: 10, color: c.muted,
                 letterSpacing: "0.1em", textTransform: "uppercase", gap: 16,
@@ -4158,10 +4356,11 @@ const AdminUsers = ({ users, waitlist, setWaitlist }) => {
                 <div>{t.username}</div>
                 <div>{t.email}</div>
                 <div>{t.joined}</div>
+                <div style={{ textAlign: isAr ? "left" : "right" }}>{isAr ? "إجراءات" : "Actions"}</div>
               </div>
               {sortedUsers.map((u, i) => (
                 <div key={u.id} style={{
-                  display: "grid", gridTemplateColumns: "80px 1.5fr 1.2fr 2fr 1fr",
+                  display: "grid", gridTemplateColumns: "80px 1.5fr 1.2fr 2fr 1fr 110px",
                   padding: "18px 24px",
                   borderBottom: i === sortedUsers.length - 1 ? "none" : `1px solid ${c.border}`,
                   alignItems: "center", gap: 16,
@@ -4177,6 +4376,44 @@ const AdminUsers = ({ users, waitlist, setWaitlist }) => {
                   <div style={{ fontFamily: fontMono, fontSize: 13, color: c.text }}>{u.email}</div>
                   <div style={{ fontFamily: fontMono, fontSize: 11, color: c.muted }}>
                     {new Date(u.joinedAt).toLocaleDateString(isAr ? "ar-SA" : "en-US")}
+                  </div>
+                  <div style={{ display: "flex", justifyContent: isAr ? "flex-start" : "flex-end" }}>
+                    <button
+                      onClick={async () => {
+                        // Generate a temporary password (8 chars, easy-to-read)
+                        const tempPwd = "Qarar" + Math.floor(1000 + Math.random() * 9000);
+                        const confirmed = window.confirm(
+                          (isAr
+                            ? `إعادة تعيين كلمة المرور لـ ${u.name}؟\n\nكلمة المرور الجديدة ستكون:\n${tempPwd}\n\nأرسلها للمستخدم. اطلب منه تغييرها بعد الدخول.`
+                            : `Reset password for ${u.name}?\n\nThe new temporary password will be:\n${tempPwd}\n\nSend it to the user. Ask them to change it after sign-in.`)
+                        );
+                        if (!confirmed) return;
+                        const ok = await db_resetUserPassword(u.id, simpleHash(tempPwd));
+                        if (ok) {
+                          // Try clipboard, then alert
+                          try { await navigator.clipboard.writeText(tempPwd); } catch (e) {}
+                          window.alert(
+                            isAr
+                              ? `✅ تم!\n\nكلمة المرور الجديدة: ${tempPwd}\n\n(تم نسخها للحافظة)`
+                              : `✅ Done!\n\nNew password: ${tempPwd}\n\n(Copied to clipboard)`
+                          );
+                        } else {
+                          window.alert(isAr ? "❌ فشل إعادة التعيين" : "❌ Reset failed");
+                        }
+                      }}
+                      style={{
+                        padding: "6px 10px",
+                        background: c.gold + "15",
+                        color: c.gold,
+                        border: `1px solid ${c.gold}50`,
+                        fontFamily: font(lang), fontSize: 11,
+                        cursor: "pointer", borderRadius: 2,
+                        display: "inline-flex", alignItems: "center", gap: 5,
+                      }}
+                      title={isAr ? "إعادة تعيين كلمة المرور" : "Reset password"}
+                    >
+                      🔑 {isAr ? "إعادة" : "Reset"}
+                    </button>
                   </div>
                 </div>
               ))}
