@@ -105,6 +105,16 @@ export async function db_createUser({ name, username, email, passwordHash }) {
   };
 }
 
+// Admin-only: reset a user's password
+export async function db_resetUserPassword(userId, newPasswordHash) {
+  const { error } = await supabase
+    .from("users")
+    .update({ password_hash: newPasswordHash })
+    .eq("id", userId);
+  if (error) { console.error("resetUserPassword:", error); return false; }
+  return true;
+}
+
 // ═══════════════════════════════════════════════════════
 // WAITLIST
 // ═══════════════════════════════════════════════════════
