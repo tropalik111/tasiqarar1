@@ -190,6 +190,10 @@ const STRINGS = {
     noChartImages: "No chart images uploaded yet.",
     news: "News",
     liveFromTradingView: "Live · TradingView",
+    liveChart: "Live Chart",
+    outlookSection: "Qarar's Outlook",
+    scenarioSection: "Scenario",
+    analysisSection: "Detailed Analysis",
     // Market Overview (NEW)
     marketOverview: "Market Overview",
     watchlist: "All 10 Leading Stocks",
@@ -440,6 +444,10 @@ const STRINGS = {
     noChartImages: "لم تُرفع صور تحليل بعد.",
     news: "الأخبار",
     liveFromTradingView: "مباشر · من TradingView",
+    liveChart: "الرسم البياني المباشر",
+    outlookSection: "توقّع قَرار",
+    scenarioSection: "السيناريو",
+    analysisSection: "التحليل التفصيلي",
     // Market Overview (NEW)
     marketOverview: "متابعة السوق",
     watchlist: "الشركات القيادية العشرة",
@@ -1114,9 +1122,9 @@ const TradingViewNews = ({ symbol }) => {
     script.src = "https://s3.tradingview.com/external-embedding/embed-widget-timeline.js";
     script.async = true;
     script.type = "text/javascript";
+    // Use "all_symbols" feed mode — broader news coverage including Saudi stocks
     script.innerHTML = JSON.stringify({
-      feedMode: "symbol",
-      symbol: `TADAWUL:${symbol}`,
+      feedMode: "all_symbols",
       isTransparent: true,
       displayMode: "regular",
       width: "100%",
@@ -1144,12 +1152,150 @@ const TradingViewNews = ({ symbol }) => {
         <h3 style={{ fontFamily: font(lang), fontSize: 22, fontWeight: 500, color: c.textHi, margin: 0 }}>
           {t.news} <span style={{ fontStyle: "italic", color: c.gold }}>{t.liveFromTradingView}</span>
         </h3>
-        <SectionLabel>{symbol} · TADAWUL</SectionLabel>
+        <SectionLabel>Markets · Live</SectionLabel>
       </div>
       <div ref={containerRef} className="tradingview-widget-container" style={{ minHeight: 460, padding: 8 }} />
     </Card>
   );
 };
+
+/* ──────────────────────────────────────────────────────────────────
+   TradingView Ticker Tape — horizontal price strip for header
+   ────────────────────────────────────────────────────────────────── */
+
+const TradingViewTicker = ({ symbols = [] }) => {
+  const { lang, theme } = useApp();
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    containerRef.current.innerHTML = "";
+
+    const script = document.createElement("script");
+    script.src = "https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js";
+    script.async = true;
+    script.type = "text/javascript";
+    script.innerHTML = JSON.stringify({
+      symbols: symbols.length > 0
+        ? symbols.map((s) => ({ proName: `TADAWUL:${s.sym}`, title: s.title || s.sym }))
+        : [
+            { proName: "TADAWUL:2222", title: "Aramco" },
+            { proName: "TADAWUL:1180", title: "Al Rajhi" },
+            { proName: "TADAWUL:2010", title: "SABIC" },
+          ],
+      showSymbolLogo: false,
+      isTransparent: true,
+      displayMode: "adaptive",
+      colorTheme: theme === "dark" ? "dark" : "light",
+      locale: lang === "ar" ? "ar_AE" : "en",
+    });
+    containerRef.current.appendChild(script);
+
+    return () => { if (containerRef.current) containerRef.current.innerHTML = ""; };
+  }, [symbols, lang, theme]);
+
+  return (
+    <div ref={containerRef} className="tradingview-widget-container"
+      style={{ width: "100%", minHeight: 46 }} />
+  );
+};
+
+/* ──────────────────────────────────────────────────────────────────
+   TradingView Advanced Chart — main chart for stock pages
+   ────────────────────────────────────────────────────────────────── */
+
+const TradingViewChart = ({ symbol, height = 500 }) => {
+  const { c, t, lang, theme } = useApp();
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    if (!containerRef.current || !symbol) return;
+    containerRef.current.innerHTML = "";
+
+    const script = document.createElement("script");
+    script.src = "https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js";
+    script.async = true;
+    script.type = "text/javascript";
+    script.innerHTML = JSON.stringify({
+      autosize: true,
+      symbol: `TADAWUL:${symbol}`,
+      interval: "D",
+      timezone: "Asia/Riyadh",
+      theme: theme === "dark" ? "dark" : "light",
+      style: "1",
+      locale: lang === "ar" ? "ar_AE" : "en",
+      enable_publishing: false,
+      allow_symbol_change: false,
+      save_image: false,
+      hide_side_toolbar: false,
+      hide_top_toolbar: false,
+      hide_legend: false,
+      withdateranges: true,
+      details: false,
+      hotlist: false,
+      calendar: false,
+      backgroundColor: theme === "dark" ? "#11161D" : "#FFFFFF",
+      gridColor: theme === "dark" ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)",
+    });
+    containerRef.current.appendChild(script);
+
+    return () => { if (containerRef.current) containerRef.current.innerHTML = ""; };
+  }, [symbol, lang, theme]);
+
+  if (!symbol) return null;
+
+  return (
+    <Card style={{ padding: 0, overflow: "hidden" }}>
+      <div style={{
+        padding: "20px 28px 16px",
+        borderBottom: `1px solid ${c.border}`,
+        display: "flex", justifyContent: "space-between", alignItems: "baseline",
+        flexWrap: "wrap", gap: 8,
+      }}>
+        <h3 style={{ fontFamily: font(lang), fontSize: 22, fontWeight: 500, color: c.textHi, margin: 0 }}>
+          {t.liveChart}
+        </h3>
+        <SectionLabel>TADAWUL · {symbol}</SectionLabel>
+      </div>
+      <div ref={containerRef} className="tradingview-widget-container"
+        style={{ height, width: "100%" }} />
+    </Card>
+  );
+};
+
+/* ──────────────────────────────────────────────────────────────────
+   TradingView Symbol Info — compact price summary
+   ────────────────────────────────────────────────────────────────── */
+
+const TradingViewSymbolInfo = ({ symbol }) => {
+  const { lang, theme } = useApp();
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    if (!containerRef.current || !symbol) return;
+    containerRef.current.innerHTML = "";
+
+    const script = document.createElement("script");
+    script.src = "https://s3.tradingview.com/external-embedding/embed-widget-symbol-info.js";
+    script.async = true;
+    script.type = "text/javascript";
+    script.innerHTML = JSON.stringify({
+      symbol: `TADAWUL:${symbol}`,
+      width: "100%",
+      locale: lang === "ar" ? "ar_AE" : "en",
+      colorTheme: theme === "dark" ? "dark" : "light",
+      isTransparent: true,
+    });
+    containerRef.current.appendChild(script);
+
+    return () => { if (containerRef.current) containerRef.current.innerHTML = ""; };
+  }, [symbol, lang, theme]);
+
+  if (!symbol) return null;
+
+  return <div ref={containerRef} className="tradingview-widget-container" style={{ width: "100%" }} />;
+};
+
 
 const WaveChart = ({ series = ARAMCO_SERIES, height = 320, support = 26.2, resistance = 30.1 }) => {
   const { c, lang } = useApp();
@@ -2256,8 +2402,19 @@ const StockPage = ({ stocks, selectedStockId, setSelectedStockId }) => {
     );
   }
 
+  // Outlook config (color, icon, label)
+  const outlookConf =
+    stock.outlook === "bullish" ? { icon: "▲", color: c.green, label: t.bullishExpected } :
+    stock.outlook === "bearish" ? { icon: "▼", color: c.red, label: t.bearishExpected } :
+    stock.outlook === "sideways" ? { icon: "→", color: c.amber, label: t.sidewaysExpected } :
+    null;
+
+  const scenario = isAr ? stock.scenarioAr : stock.scenario;
+  const analysis = isAr ? stock.analysisAr : stock.analysis;
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+      {/* Stock selector (tabs) */}
       {published.length > 1 && (
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           {published.map((s) => (
@@ -2275,6 +2432,7 @@ const StockPage = ({ stocks, selectedStockId, setSelectedStockId }) => {
         </div>
       )}
 
+      {/* Stock Header */}
       <Card style={{ padding: 32 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 24 }}>
           <div>
@@ -2284,129 +2442,87 @@ const StockPage = ({ stocks, selectedStockId, setSelectedStockId }) => {
                 {isAr ? stock.nameAr : stock.name}
               </h1>
             </div>
-            <div style={{ display: "flex", alignItems: "baseline", gap: 16, marginTop: 16, flexWrap: "wrap" }}>
-              <span style={{ fontFamily: fontMono, fontSize: 36, color: c.textHi }}>{fmt(stock.price, 2, lang)}</span>
-              <span style={{ fontFamily: fontMono, fontSize: 14, color: (stock.change || 0) >= 0 ? c.green : c.red }}>
-                {(stock.change || 0) >= 0 ? "▲" : "▼"} {fmt(Math.abs(stock.change || 0), 2, lang)}%
-              </span>
-              <span style={{ fontFamily: fontMono, fontSize: 10, color: c.muted, letterSpacing: "0.1em" }}>
-                {t.live}
-              </span>
-            </div>
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: isAr ? "flex-start" : "flex-end" }}>
-            <Pill color={c.green}><TrendingUp size={10} /> {t.bullishWave3} · {isAr ? stock.waveAr : stock.wave}</Pill>
-            <Pill color={c.blue}><Droplets size={10} /> {t.liquidityInflow}</Pill>
-            <Pill color={c.gold}><Sparkles size={10} /> {t.highConviction}</Pill>
-          </div>
-        </div>
-      </Card>
-
-      {/* Chart Images Slider — NEW */}
-      <ChartImageSlider images={stock.images} />
-
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 24 }}>
-        <Card style={{ padding: 24 }}>
-          <SectionLabel accent><Waves size={11} /> {t.waveStructure}</SectionLabel>
-          <div style={{ marginTop: 20, fontFamily: font(lang), fontSize: 30, color: c.textHi, lineHeight: 1.3, fontWeight: 500 }}>
-            {t.currentlyIn} <span style={{ fontStyle: "italic", color: c.gold }}>{isAr ? stock.waveAr : stock.wave}</span>
-          </div>
-          <div style={{ fontFamily: font(lang), fontSize: 15, color: c.text, marginTop: 12, lineHeight: 1.7 }}>
-            {t.waveDesc}
-          </div>
-          <div style={{ marginTop: 20, display: "flex", flexDirection: "column", gap: 10 }}>
-            {[
-              { l: t.continuation, v: stock.continuation, col: c.green },
-              { l: t.reversal, v: stock.reversal, col: c.red },
-            ].map((b) => (
-              <div key={b.l}>
-                <div style={{ display: "flex", justifyContent: "space-between", fontFamily: font(lang), fontSize: 13, color: c.muted, marginBottom: 4 }}>
-                  <span>{b.l}</span>
-                  <span style={{ color: b.col, fontFamily: fontMono }}>{b.v}%</span>
-                </div>
-                <div style={{ height: 4, background: c.border, borderRadius: 2, overflow: "hidden" }}>
-                  <div style={{ width: `${b.v}%`, height: "100%", background: b.col }} />
-                </div>
-              </div>
-            ))}
-          </div>
-        </Card>
-
-        <Card style={{ padding: 24 }}>
-          <SectionLabel accent><Activity size={11} /> {t.momentumFlow}</SectionLabel>
-          <div style={{ display: "flex", justifyContent: "center", marginTop: 12 }}>
-            <Gauge value={stock.momentum || 50} label={t.momentum} color={c.green} />
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 12 }}>
-            <div>
-              <div style={{ fontFamily: fontMono, fontSize: 10, color: c.muted, letterSpacing: "0.12em", textTransform: "uppercase" }}>
-                {t.liquidity}
-              </div>
-              <div style={{ fontFamily: font(lang), fontSize: 20, color: c.blue, marginTop: 4, fontWeight: 500 }}>{t.inflow}</div>
-            </div>
-            <div>
-              <div style={{ fontFamily: fontMono, fontSize: 10, color: c.muted, letterSpacing: "0.12em", textTransform: "uppercase" }}>
-                {t.volume}
-              </div>
-              <div style={{ fontFamily: font(lang), fontSize: 20, color: c.textHi, marginTop: 4, fontWeight: 500 }}>+18%</div>
-            </div>
-          </div>
-        </Card>
-
-        <Card style={{ padding: 24 }}>
-          <SectionLabel accent><Target size={11} /> {t.keyZones}</SectionLabel>
-          <div style={{ marginTop: 20, display: "flex", flexDirection: "column", gap: 14 }}>
-            {[
-              { l: `${t.resistance} R1`, v: stock.resistance, col: c.red, dist: `+${fmt(((stock.resistance - stock.price) / stock.price) * 100, 1, lang)}%` },
-              { l: t.current, v: stock.price, col: c.gold, dist: "—", active: true },
-              { l: `${t.support} S1`, v: stock.support, col: c.green, dist: `${fmt(((stock.support - stock.price) / stock.price) * 100, 1, lang)}%` },
-            ].map((z) => (
-              <div key={z.l} style={{
-                display: "flex", justifyContent: "space-between", alignItems: "baseline",
-                paddingLeft: !isAr && z.active ? 10 : 0,
-                paddingRight: isAr && z.active ? 10 : 0,
-                borderLeft: !isAr && z.active ? `2px solid ${c.gold}` : "none",
-                borderRight: isAr && z.active ? `2px solid ${c.gold}` : "none",
-              }}>
-                <div>
-                  <div style={{ fontFamily: fontMono, fontSize: 10, color: c.muted, letterSpacing: "0.1em", textTransform: "uppercase" }}>{z.l}</div>
-                  <div style={{ fontFamily: font(lang), fontSize: 22, color: z.col, marginTop: 2, fontWeight: 500 }}>{fmt(z.v, 2, lang)}</div>
-                </div>
-                <div style={{ fontFamily: fontMono, fontSize: 11, color: c.muted }}>{z.dist}</div>
-              </div>
-            ))}
-          </div>
-        </Card>
-      </div>
-
-      <Card style={{ padding: 32, background: `linear-gradient(135deg, ${c.surface} 0%, ${c.surface2} 100%)` }}>
-        <div style={{ display: "flex", gap: 24, alignItems: "flex-start" }}>
-          <div style={{
-            flexShrink: 0, width: 48, height: 48, border: `1px solid ${c.gold}`,
-            borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
-          }}>
-            <Brain size={20} color={c.gold} strokeWidth={1.4} />
-          </div>
-          <div style={{ flex: 1 }}>
-            <SectionLabel accent>{t.aiSynthesis}</SectionLabel>
-            <p style={{
-              fontFamily: font(lang), fontSize: 24, fontWeight: 400, color: c.textHi,
-              lineHeight: 1.6, margin: "16px 0 0", letterSpacing: "-0.005em",
-            }}>
-              {isAr ? stock.analysisAr : stock.analysis}
-            </p>
             <div style={{
-              marginTop: 20, display: "flex", gap: 24, flexWrap: "wrap",
-              fontFamily: fontMono, fontSize: 11,
-              color: c.muted, letterSpacing: "0.1em",
+              fontFamily: font(lang), fontSize: 14, color: c.muted, marginTop: 12, fontStyle: "italic",
             }}>
-              <span>{t.confidenceHigh}</span>
-              <span>{t.horizon}</span>
-              <span>{t.updated} · {timeAgo(stock.updatedAt, lang)}</span>
+              {t.updated} · {timeAgo(stock.updatedAt, lang)}
             </div>
           </div>
+          {outlookConf && (
+            <div style={{
+              padding: "16px 24px",
+              background: outlookConf.color + "15",
+              border: `1px solid ${outlookConf.color}40`,
+              borderRadius: 4,
+              minWidth: 200,
+            }}>
+              <div style={{
+                fontFamily: fontMono, fontSize: 10, color: c.muted,
+                letterSpacing: "0.15em", textTransform: "uppercase", marginBottom: 8,
+              }}>
+                {t.outlookSection}
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <span style={{ fontSize: 32, color: outlookConf.color, fontWeight: 600, lineHeight: 1 }}>
+                  {outlookConf.icon}
+                </span>
+                <span style={{ fontFamily: font(lang), fontSize: 22, color: outlookConf.color, fontWeight: 500 }}>
+                  {outlookConf.label}
+                </span>
+              </div>
+            </div>
+          )}
         </div>
       </Card>
+
+      {/* TradingView Live Chart */}
+      <TradingViewChart symbol={stock.sym} height={520} />
+
+      {/* Scenario (if provided) */}
+      {scenario && (
+        <Card style={{
+          padding: 28,
+          background: `linear-gradient(135deg, ${c.surface} 0%, ${c.surface2} 100%)`,
+          borderLeft: !isAr ? `3px solid ${c.gold}` : "none",
+          borderRight: isAr ? `3px solid ${c.gold}` : "none",
+        }}>
+          <SectionLabel accent><Target size={11} /> {t.scenarioSection}</SectionLabel>
+          <p style={{
+            fontFamily: font(lang), fontSize: 22, fontWeight: 400, color: c.textHi,
+            lineHeight: 1.7, margin: "16px 0 0", fontStyle: "italic",
+          }}>
+            "{scenario}"
+          </p>
+        </Card>
+      )}
+
+      {/* Chart Images Slider (if any image is set) */}
+      {stock.images && (stock.images.daily || stock.images.weekly || stock.images.monthly) && (
+        <ChartImageSlider images={stock.images} />
+      )}
+
+      {/* Detailed Analysis (if provided) */}
+      {analysis && (
+        <Card style={{ padding: 32 }}>
+          <div style={{ display: "flex", gap: 24, alignItems: "flex-start" }}>
+            <div style={{
+              flexShrink: 0, width: 48, height: 48, border: `1px solid ${c.gold}`,
+              borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
+            }}>
+              <Brain size={20} color={c.gold} strokeWidth={1.4} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <SectionLabel accent>{t.analysisSection}</SectionLabel>
+              <p style={{
+                fontFamily: font(lang), fontSize: 17, fontWeight: 400, color: c.textHi,
+                lineHeight: 1.8, margin: "16px 0 0", whiteSpace: "pre-wrap",
+              }}>
+                {analysis}
+              </p>
+            </div>
+          </div>
+        </Card>
+      )}
 
       {/* Live News from TradingView */}
       <TradingViewNews symbol={stock.sym} />
@@ -2436,12 +2552,6 @@ const MarketPage = ({ market, stocks, goToStock }) => {
     if (conf === "high") return t.high;
     if (conf === "low") return t.low;
     return t.medium;
-  };
-
-  const horizonLabel = (h) => {
-    if (h === "1W") return t.horizon1W;
-    if (h === "3M") return t.horizon3M;
-    return t.horizon1M;
   };
 
   // Count outlooks for summary
@@ -2524,7 +2634,7 @@ const MarketPage = ({ market, stocks, goToStock }) => {
         <div style={{
           padding: "14px 28px", background: c.surface2,
           display: "grid",
-          gridTemplateColumns: "70px 1.4fr 1fr 140px 2.2fr 80px 80px",
+          gridTemplateColumns: "70px 1.4fr 1fr 140px 2.2fr 80px",
           gap: 16, alignItems: "center",
           fontFamily: fontMono, fontSize: 10, color: c.muted,
           letterSpacing: "0.12em", textTransform: "uppercase",
@@ -2536,7 +2646,6 @@ const MarketPage = ({ market, stocks, goToStock }) => {
           <div>{t.colOutlook}</div>
           <div>{t.colScenario}</div>
           <div style={{ textAlign: "center" }}>{t.colConf}</div>
-          <div style={{ textAlign: "center" }}>{t.colHorizon}</div>
         </div>
 
         {/* Stock rows */}
@@ -2548,7 +2657,7 @@ const MarketPage = ({ market, stocks, goToStock }) => {
               padding: "18px 28px",
               borderBottom: i === stocks.length - 1 ? "none" : `1px solid ${c.border}`,
               display: "grid",
-              gridTemplateColumns: "70px 1.4fr 1fr 140px 2.2fr 80px 80px",
+              gridTemplateColumns: "70px 1.4fr 1fr 140px 2.2fr 80px",
               gap: 16, alignItems: "center",
               cursor: s.published ? "pointer" : "default",
               opacity: s.published ? 1 : 0.6,
@@ -2611,11 +2720,6 @@ const MarketPage = ({ market, stocks, goToStock }) => {
                 ) : (
                   <span style={{ color: c.muted, fontFamily: fontMono, fontSize: 11 }}>—</span>
                 )}
-              </div>
-
-              {/* Horizon */}
-              <div style={{ textAlign: "center", fontFamily: fontMono, fontSize: 11, color: s.outlook ? c.gold : c.muted, letterSpacing: "0.1em" }}>
-                {s.outlook ? horizonLabel(s.horizon) : "—"}
               </div>
             </div>
           );
@@ -3627,16 +3731,20 @@ const AdminStocks = ({ stocks, setStocks }) => {
   const [showForm, setShowForm] = useState(false);
 
   const blank = {
-    id: "s" + Date.now(), sym: "", name: "", nameAr: "",
+    id: "s" + Date.now(),
+    sym: "", name: "", nameAr: "",
+    sector: "", sectorAr: "",
+    outlook: "",
+    scenario: "", scenarioAr: "",
+    analysis: "", analysisAr: "",
+    confidence: "medium",
+    published: false,
+    images: { daily: "", weekly: "", monthly: "" },
+    // Legacy fields kept null for backward compatibility with DB schema
     wave: "", waveAr: "",
     continuation: 50, reversal: 50, momentum: 50,
     support: 0, resistance: 0, price: 0, change: 0,
-    analysis: "", analysisAr: "",
-    sector: "", sectorAr: "",
-    outlook: "", scenario: "", scenarioAr: "",
-    confidence: "medium", horizon: "1M",
-    published: false,
-    images: { daily: "", weekly: "", monthly: "" },
+    horizon: "",
   };
 
   const startNew = () => { setEditing({ ...blank, id: "s" + Date.now() }); setShowForm(true); };
@@ -3707,18 +3815,10 @@ const AdminStocks = ({ stocks, setStocks }) => {
             <Input label={t.formStock + " (AR)"} value={editing.nameAr} onChange={(v) => setEditing({ ...editing, nameAr: v })} placeholder="أرامكو السعودية" />
             <Input label={t.formSymbol} value={editing.sym} onChange={(v) => setEditing({ ...editing, sym: v })} placeholder="2222" />
             <Input label={isAr ? "القطاع (EN)" : "Sector (EN)"} value={editing.sector} onChange={(v) => setEditing({ ...editing, sector: v })} placeholder="Energy" />
-            <Input label={t.formWave + " (EN)"} value={editing.wave} onChange={(v) => setEditing({ ...editing, wave: v })} placeholder="Wave 3" />
-            <Input label={t.formWave + " (AR)"} value={editing.waveAr} onChange={(v) => setEditing({ ...editing, waveAr: v })} placeholder="الموجة الثالثة" />
-            <Input label={t.formPrice} value={editing.price} onChange={(v) => setEditing({ ...editing, price: parseFloat(v) || 0 })} type="number" />
-            <Input label={t.formChange} value={editing.change} onChange={(v) => setEditing({ ...editing, change: parseFloat(v) || 0 })} type="number" />
-            <Input label={t.formContinuation} value={editing.continuation} onChange={(v) => setEditing({ ...editing, continuation: parseInt(v) || 0 })} type="number" />
-            <Input label={t.formReversal} value={editing.reversal} onChange={(v) => setEditing({ ...editing, reversal: parseInt(v) || 0 })} type="number" />
-            <Input label={t.formSupport} value={editing.support} onChange={(v) => setEditing({ ...editing, support: parseFloat(v) || 0 })} type="number" />
-            <Input label={t.formResistance} value={editing.resistance} onChange={(v) => setEditing({ ...editing, resistance: parseFloat(v) || 0 })} type="number" />
-            <Input label={isAr ? "الزخم (0-100)" : "Momentum (0-100)"} value={editing.momentum} onChange={(v) => setEditing({ ...editing, momentum: parseInt(v) || 0 })} type="number" />
+            <Input label={isAr ? "القطاع (AR)" : "Sector (AR)"} value={editing.sectorAr} onChange={(v) => setEditing({ ...editing, sectorAr: v })} placeholder="الطاقة" />
           </div>
 
-          {/* Outlook section — NEW */}
+          {/* Outlook section */}
           <div style={{ marginTop: 24, paddingTop: 24, borderTop: `1px solid ${c.border}` }}>
             <SectionLabel accent><TrendingUp size={11} /> {t.outlook} & {t.scenario}</SectionLabel>
 
@@ -3756,50 +3856,26 @@ const AdminStocks = ({ stocks, setStocks }) => {
                 placeholder="مثال: كسر مقاومة ٢٨ يفتح المجال لـ ٣٠" />
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginTop: 8 }}>
-              <div>
-                <div style={{
-                  fontFamily: fontMono, fontSize: 10, color: c.muted,
-                  letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 6,
-                }}>{t.confidence}</div>
-                <div style={{ display: "flex", gap: 6 }}>
-                  {[
-                    { v: "high", l: t.high, c: c.green },
-                    { v: "medium", l: t.medium, c: c.amber },
-                    { v: "low", l: t.low, c: c.red },
-                  ].map((cf) => (
-                    <button key={cf.v} onClick={() => setEditing({ ...editing, confidence: cf.v })} style={{
-                      flex: 1, padding: "8px",
-                      background: editing.confidence === cf.v ? cf.c + "25" : "transparent",
-                      color: editing.confidence === cf.v ? cf.c : c.muted,
-                      border: `1px solid ${editing.confidence === cf.v ? cf.c : c.border}`,
-                      fontFamily: font(lang), fontSize: 13, fontWeight: 500,
-                      cursor: "pointer", borderRadius: 2,
-                    }}>{cf.l}</button>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <div style={{
-                  fontFamily: fontMono, fontSize: 10, color: c.muted,
-                  letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 6,
-                }}>{t.horizon}</div>
-                <div style={{ display: "flex", gap: 6 }}>
-                  {[
-                    { v: "1W", l: t.horizon1W },
-                    { v: "1M", l: t.horizon1M },
-                    { v: "3M", l: t.horizon3M },
-                  ].map((h) => (
-                    <button key={h.v} onClick={() => setEditing({ ...editing, horizon: h.v })} style={{
-                      flex: 1, padding: "8px",
-                      background: editing.horizon === h.v ? c.gold + "25" : "transparent",
-                      color: editing.horizon === h.v ? c.gold : c.muted,
-                      border: `1px solid ${editing.horizon === h.v ? c.gold : c.border}`,
-                      fontFamily: font(lang), fontSize: 13, fontWeight: 500,
-                      cursor: "pointer", borderRadius: 2,
-                    }}>{h.l}</button>
-                  ))}
-                </div>
+            <div style={{ marginTop: 8 }}>
+              <div style={{
+                fontFamily: fontMono, fontSize: 10, color: c.muted,
+                letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 6,
+              }}>{t.confidence}</div>
+              <div style={{ display: "flex", gap: 6, maxWidth: 360 }}>
+                {[
+                  { v: "high", l: t.high, c: c.green },
+                  { v: "medium", l: t.medium, c: c.amber },
+                  { v: "low", l: t.low, c: c.red },
+                ].map((cf) => (
+                  <button key={cf.v} onClick={() => setEditing({ ...editing, confidence: cf.v })} style={{
+                    flex: 1, padding: "8px",
+                    background: editing.confidence === cf.v ? cf.c + "25" : "transparent",
+                    color: editing.confidence === cf.v ? cf.c : c.muted,
+                    border: `1px solid ${editing.confidence === cf.v ? cf.c : c.border}`,
+                    fontFamily: font(lang), fontSize: 13, fontWeight: 500,
+                    cursor: "pointer", borderRadius: 2,
+                  }}>{cf.l}</button>
+                ))}
               </div>
             </div>
           </div>
@@ -3857,7 +3933,7 @@ const AdminStocks = ({ stocks, setStocks }) => {
               padding: "20px 24px",
               borderTop: i === 0 ? "none" : `1px solid ${c.border}`,
               display: "grid",
-              gridTemplateColumns: "60px 1fr 80px 70px 100px 130px auto",
+              gridTemplateColumns: "60px 1fr 70px 100px 130px auto",
               alignItems: "center", gap: 16,
             }}>
               <div style={{ fontFamily: fontMono, fontSize: 12, color: c.muted }}>{s.sym}</div>
@@ -3866,10 +3942,9 @@ const AdminStocks = ({ stocks, setStocks }) => {
                   {isAr ? s.nameAr : s.name}
                 </div>
                 <div style={{ fontFamily: font(lang), fontSize: 13, color: c.muted, marginTop: 2 }}>
-                  {isAr ? s.waveAr : s.wave}
+                  {isAr ? (s.sectorAr || "") : (s.sector || "")}
                 </div>
               </div>
-              <div style={{ fontFamily: fontMono, fontSize: 13, color: c.textHi }}>{(s.price || 0).toFixed(2)}</div>
               <Pill color={imgCount > 0 ? c.blue : c.muted}>
                 <ImageIcon size={9} /> {imgCount}/3
               </Pill>
@@ -4594,6 +4669,16 @@ export default function Qarar() {
             </div>
           </div>
         </header>
+
+        {/* TradingView Ticker Tape — live prices strip */}
+        <div style={{ borderBottom: `1px solid ${c.border}`, background: c.surface }}>
+          <TradingViewTicker
+            symbols={(stocks || [])
+              .filter((s) => s.published)
+              .slice(0, 10)
+              .map((s) => ({ sym: s.sym, title: isAr ? s.nameAr : s.name }))}
+          />
+        </div>
 
         <main style={{ maxWidth: 1400, margin: "0 auto", padding: "32px" }}>
           {renderPage()}
