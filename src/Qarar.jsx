@@ -4096,27 +4096,59 @@ const AdminStocks = ({ stocks, setStocks }) => {
   };
 
   const save = async () => {
+    if (!editing.sym || !editing.sym.trim()) {
+      window.alert(isAr ? "⚠️ يرجى إدخال رمز السهم (مثل 2222)" : "⚠️ Please enter the stock symbol (e.g., 2222)");
+      return;
+    }
+    if (!editing.name && !editing.nameAr) {
+      window.alert(isAr ? "⚠️ يرجى إدخال اسم السهم (عربي أو إنجليزي)" : "⚠️ Please enter the stock name (Arabic or English)");
+      return;
+    }
     const updated = { ...editing, updatedAt: Date.now() };
-    await db_saveStock(updated);
+    const ok = await db_saveStock(updated);
+    if (!ok) {
+      window.alert(isAr ? "❌ فشل الحفظ. تحقّق من اتصالك." : "❌ Save failed. Check your connection.");
+      return;
+    }
     const fresh = await db_listStocks();
     setStocks(fresh);
     setShowForm(false); setEditing(null);
+    window.alert(isAr ? "✅ تم الحفظ بنجاح" : "✅ Saved successfully");
   };
 
   const remove = async (id) => {
-    if (!window.confirm(t.confirmDelete)) return;
-    await db_deleteStock(id);
+    const stock = stocks.find((s) => s.id === id);
+    const name = stock ? (isAr ? (stock.nameAr || stock.name) : (stock.name || stock.nameAr)) : "";
+    const confirmMsg = isAr
+      ? `حذف "${name}" نهائياً؟\n\nهذا الإجراء لا يمكن التراجع عنه.`
+      : `Permanently delete "${name}"?\n\nThis cannot be undone.`;
+    if (!window.confirm(confirmMsg)) return;
+    const ok = await db_deleteStock(id);
+    if (!ok) {
+      window.alert(isAr ? "❌ فشل الحذف" : "❌ Delete failed");
+      return;
+    }
     const fresh = await db_listStocks();
     setStocks(fresh);
+    window.alert(isAr ? "✅ تم الحذف" : "✅ Deleted");
   };
 
   const togglePublish = async (id) => {
     const stock = stocks.find((s) => s.id === id);
     if (!stock) return;
     const updated = { ...stock, published: !stock.published, updatedAt: Date.now() };
-    await db_saveStock(updated);
+    const ok = await db_saveStock(updated);
+    if (!ok) {
+      window.alert(isAr ? "❌ فشل التحديث" : "❌ Update failed");
+      return;
+    }
     const fresh = await db_listStocks();
     setStocks(fresh);
+    window.alert(
+      updated.published
+        ? (isAr ? "✅ تم نشر التحليل — الزائرون يشاهدونه الآن" : "✅ Published — visitors can see it now")
+        : (isAr ? "✅ تم إخفاء التحليل" : "✅ Hidden from visitors")
+    );
   };
 
   if (showForm && editing) {
@@ -4275,13 +4307,36 @@ const AdminStocks = ({ stocks, setStocks }) => {
             </div>
           </div>
 
-          <div style={{ display: "flex", gap: 12, marginTop: 24, paddingTop: 24, borderTop: `1px solid ${c.border}` }}>
+          <div style={{ display: "flex", gap: 12, marginTop: 24, paddingTop: 24, borderTop: `1px solid ${c.border}`, flexWrap: "wrap" }}>
             <Button onClick={save} icon={Save}>{t.save}</Button>
             {editing.published ? (
-              <Button variant="ghost" onClick={() => setEditing({ ...editing, published: false })} icon={EyeOff}>{t.unpublish}</Button>
+              <Button variant="ghost" onClick={async () => {
+                const updated = { ...editing, published: false, updatedAt: Date.now() };
+                setEditing(updated);
+                await db_saveStock(updated);
+                const fresh = await db_listStocks();
+                setStocks(fresh);
+                window.alert(isAr ? "✅ تم إخفاء التحليل" : "✅ Analysis hidden");
+              }} icon={EyeOff}>{isAr ? "حفظ + إخفاء" : "Save + Unpublish"}</Button>
             ) : (
-              <Button variant="secondary" onClick={() => setEditing({ ...editing, published: true })} icon={Eye}>{t.publish}</Button>
+              <Button variant="secondary" onClick={async () => {
+                const updated = { ...editing, published: true, updatedAt: Date.now() };
+                setEditing(updated);
+                await db_saveStock(updated);
+                const fresh = await db_listStocks();
+                setStocks(fresh);
+                window.alert(isAr ? "✅ تم نشر التحليل — الزائرون يشاهدونه الآن" : "✅ Analysis published — visitors can see it now");
+              }} icon={Eye}>{isAr ? "حفظ + نشر" : "Save + Publish"}</Button>
             )}
+            <div style={{
+              flex: 1, minWidth: 200,
+              fontFamily: font(lang), fontSize: 12, color: c.muted, fontStyle: "italic",
+              display: "flex", alignItems: "center", gap: 6,
+            }}>
+              💡 {isAr
+                ? "زر «حفظ» يخزّن التغييرات. زر «نشر» يحفظ ويعرض التحليل للزوار فوراً."
+                : "Save stores changes. Publish saves AND makes it visible to visitors immediately."}
+            </div>
           </div>
         </Card>
       </div>
